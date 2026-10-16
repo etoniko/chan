@@ -1,0 +1,21 @@
+{
+  "posts": {},
+  "channels": {
+    "toporlive": {
+      "title": "Топор Live"
+    },
+    "moscowach": {
+      "title": "Москвач • Новости Москвы"
+    },
+    "tachki": {
+      "title": "Тачки и Точка"
+    },
+    "Cbpub": {
+      "title": "КБ"
+    },
+    "mudak": {
+      "title": "MDK"
+    }
+  },
+  "updatedAt": "2026-10-15T23:42:01.419Z"
+}
