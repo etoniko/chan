@@ -604,8 +604,17 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
 
 .site-footer{
   max-width:680px;margin:28px auto 24px;padding:8px 16px 0;
-  color:var(--dim);font-size:13px
+  color:var(--dim);font-size:13px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px
 }
+.site-footer a{color:var(--dim);font-weight:650;white-space:nowrap}
+.site-footer a:hover{color:var(--fg);text-decoration:none}
+.legal{max-width:680px;margin:0 auto;padding:6px 16px 8px}
+.legal h1{font-size:26px;margin-bottom:6px}
+.legal h2{font-size:17px;margin:22px 0 8px;letter-spacing:-.02em}
+.legal p,.legal li{font-size:15.5px;line-height:1.65}
+.legal ul{margin:8px 0 0;padding-left:18px}
+.legal .legal-date{color:var(--dim);font-size:13px;margin:0 0 16px}
 
 @media (prefers-color-scheme:dark){
   :root{
