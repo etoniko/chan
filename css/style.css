@@ -360,25 +360,32 @@ main.post > article{
 }
 .feed-post-text a{word-break:break-word}
 .feed-post-text br+br{display:block;content:""}
-.feed-post-text.is-collapsed{position:relative;max-height:10em;overflow:hidden}
+.feed-post-text.is-collapsed{
+  position:relative;max-height:10em;overflow:hidden;margin-bottom:0
+}
 .feed-post-text.is-collapsed::after{
-  position:absolute;right:0;bottom:0;left:0;height:2.6em;
-  background:linear-gradient(transparent,var(--surface));content:""
+  position:absolute;right:0;bottom:0;left:0;height:3.4em;
+  background:linear-gradient(to bottom, transparent 0%, var(--surface) 78%);
+  content:"";pointer-events:none
 }
 .feed-expand{
   display:flex;justify-content:flex-end;width:100%;
-  margin:-2.15em 0 10px;padding:0;border:0;background:none;
-  color:#a1a1a1;font-size:14px;font-weight:750;line-height:1.35;
+  margin:0 0 12px;padding:0;border:0;background:none;
+  color:var(--dim);font-size:13.5px;font-weight:500;letter-spacing:-.011em;line-height:1.35;
   text-align:right;
-  transition:color .15s var(--ease)
+  transition:color .18s var(--ease)
 }
-.feed-post-text.is-collapsed{margin-bottom:0}
 .feed-post-text.is-collapsed + .feed-expand{
-  position:relative;z-index:2;
-  padding-left:1.6em;
-  background:linear-gradient(90deg, transparent, var(--surface) 72%)
+  position:relative;z-index:2;margin-top:-1.45em
 }
-.feed-expand:hover{color:#48dd4b;text-decoration:underline}
+.feed-expand span{
+  position:relative;padding:1px 0 1px 12px;background:var(--surface)
+}
+.feed-expand span::before{
+  content:"";position:absolute;top:0;bottom:0;right:100%;width:2.8em;
+  background:linear-gradient(90deg, transparent, var(--surface));pointer-events:none
+}
+.feed-expand:hover{color:var(--fg);text-decoration:none}
 
 .feed-post-media{display:grid;gap:0;margin:0}
 .feed-post-media.has-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:var(--bg)}
@@ -638,7 +645,6 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
     background:#242526;border-color:#3e4042;box-shadow:none
   }
   .related-list .nav-link:hover,.related-list>li>a:hover,.feed-more:hover{background:#2c2e31}
-  .feed-post-text.is-collapsed::after{background:linear-gradient(transparent,#242526)}
   html{scrollbar-color:rgba(255,255,255,.35) transparent}
   ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.32)}
   .feed-post-media img{background:var(--bg)}
