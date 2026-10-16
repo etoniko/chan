@@ -63,28 +63,6 @@
     return '/' + encodeURIComponent(username) + '/' + encodeURIComponent(String(id)) + '/' +
       String(file || '').split('/').map(encodeURIComponent).join('/');
   }
-  function showFirstFrame(video) {
-    if (!video || video.dataset.framed === '1') return;
-    video.dataset.framed = '1';
-    video.playsInline = true;
-    video.preload = 'metadata';
-    const raw = video.getAttribute('src') || '';
-    if (raw && raw.indexOf('#t=') < 0) video.setAttribute('src', raw + '#t=0.001');
-    const wrap = video.closest('.feed-video-player');
-    const paint = () => {
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-      if (wrap && w && h) {
-        wrap.style.aspectRatio = w + ' / ' + h;
-        wrap.classList.toggle('is-tall', h > w);
-      }
-      if (video.currentTime < 0.001) {
-        try { video.currentTime = 0.001; } catch (e) {}
-      }
-    };
-    if (video.readyState >= 1) paint();
-    else video.addEventListener('loadedmetadata', paint);
-  }
   function fillMedia(box, username, id, media) {
     if (!box || box.childElementCount || !media || !media.length) return;
     if (media.length > 1) box.classList.add('has-grid');
@@ -98,9 +76,8 @@
         video.controls = true;
         video.playsInline = true;
         video.preload = 'metadata';
-        video.src = src + '#t=0.001';
+        video.src = src;
         wrap.appendChild(video);
-        showFirstFrame(video);
         box.appendChild(wrap);
         return;
       }
@@ -148,9 +125,7 @@
     const more = document.createElement('button');
     more.className = 'feed-expand';
     more.type = 'button';
-    const label = document.createElement('span');
-    label.textContent = 'Показать всё';
-    more.appendChild(label);
+    more.textContent = 'Показать всё';
     more.addEventListener('click', () => {
       text.classList.remove('is-collapsed');
       more.remove();
@@ -232,7 +207,6 @@
   });
 
   bindActions(document);
-  document.querySelectorAll('video').forEach(showFirstFrame);
   if (!list) return;
   list.querySelectorAll('.feed-item').forEach(hydrate);
 
