@@ -168,6 +168,36 @@
   }
 
   const list = document.getElementById('feed-list');
+  function ensureLightbox() {
+    let box = document.querySelector('.feed-lightbox');
+    if (box) return box;
+    box = document.createElement('dialog');
+    box.className = 'feed-lightbox';
+    box.innerHTML =
+      '<button class="feed-lightbox-close" type="button" aria-label="Закрыть">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '<div class="feed-lightbox-stage"><img class="feed-lightbox-image" alt=""></div>';
+    document.body.appendChild(box);
+    box.querySelector('.feed-lightbox-close').addEventListener('click', () => box.close());
+    box.addEventListener('click', (event) => {
+      if (event.target === box || event.target.classList.contains('feed-lightbox-stage')) box.close();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && box.open) box.close();
+    });
+    return box;
+  }
+  document.addEventListener('click', (event) => {
+    const img = event.target.closest && event.target.closest('.feed-post-media img, .post-media img');
+    if (!img || !img.src) return;
+    const box = ensureLightbox();
+    const view = box.querySelector('.feed-lightbox-image');
+    view.src = img.currentSrc || img.src;
+    view.alt = img.alt || '';
+    if (typeof box.showModal === 'function') box.showModal();
+    else box.setAttribute('open', '');
+  });
+
   bindActions(document);
   if (!list) return;
   list.querySelectorAll('.feed-item').forEach(hydrate);

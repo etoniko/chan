@@ -408,6 +408,10 @@ main.post > article{
   max-height:none;aspect-ratio:auto;margin:0;background:#000
 }
 .feed-video-player.is-expanded .feed-video{width:100%;height:100%;max-height:none;background:#000}
+video:fullscreen,video:-webkit-full-screen{
+  background:#000;object-fit:contain
+}
+video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
 .feed-video-player.is-expanded .feed-video-controls{opacity:1;pointer-events:auto;transform:none}
 .feed-video{
   display:block;width:100%;height:100%;max-height:none;
@@ -549,9 +553,10 @@ main.post > article{
 .feed-lightbox{
   position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;
   margin:0;padding:52px 56px 40px;border:0;box-sizing:border-box;
-  background:rgba(18,18,18,.96);color:#fff
+  background:#000;color:#fff
 }
-.feed-lightbox::backdrop{background:rgba(18,18,18,.72)}
+.feed-lightbox::backdrop{background:#000}
+.feed-lightbox-stage{background:#000}
 .feed-lightbox[open]{
   display:grid;grid-template-columns:44px minmax(0,1fr) 44px;
   grid-template-rows:minmax(0,1fr) auto;align-items:center;gap:8px;
