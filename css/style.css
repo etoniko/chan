@@ -366,19 +366,19 @@ main.post > article{
   background:linear-gradient(transparent,var(--surface));content:""
 }
 .feed-expand{
-  display:inline-flex;margin:-4px 0 12px;padding:0;border:0;background:none;
-  color:var(--acc-ink);font-size:14px;font-weight:750;
+  display:flex;justify-content:flex-end;width:100%;
+  margin:-2.15em 0 10px;padding:0;border:0;background:none;
+  color:#a1a1a1;font-size:14px;font-weight:750;line-height:1.35;
+  text-align:right;
   transition:color .15s var(--ease)
 }
 .feed-post-text.is-collapsed{margin-bottom:0}
 .feed-post-text.is-collapsed + .feed-expand{
   position:relative;z-index:2;
-  display:flex;width:max-content;margin:-2.15em 0 10px auto;
-  padding:0 0 0 1.6em;line-height:1.35;
-  background:linear-gradient(90deg, transparent, var(--surface) 42%);
-  color:var(--acc-ink)
+  padding-left:1.6em;
+  background:linear-gradient(90deg, transparent, var(--surface) 72%)
 }
-.feed-expand:hover{color:var(--acc-ink);text-decoration:underline}
+.feed-expand:hover{color:#48dd4b;text-decoration:underline}
 
 .feed-post-media{display:grid;gap:0;margin:0}
 .feed-post-media.has-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px;background:var(--bg)}
