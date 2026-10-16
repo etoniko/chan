@@ -63,6 +63,71 @@
     return '/' + encodeURIComponent(username) + '/' + encodeURIComponent(String(id)) + '/' +
       String(file || '').split('/').map(encodeURIComponent).join('/');
   }
+  function isPhone() {
+    return window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches;
+  }
+  function attachVideo(video) {
+    if (!video || video.dataset.mobileReady === '1') return;
+    video.dataset.mobileReady = '1';
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    const wrap = video.closest('.feed-video-player');
+    const fit = () => {
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!wrap || !w || !h) return;
+      wrap.style.aspectRatio = w + ' / ' + h;
+      wrap.classList.toggle('is-tall', h > w);
+    };
+    if (video.readyState >= 1) fit();
+    else video.addEventListener('loadedmetadata', fit);
+    if (!isPhone()) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.autoplay = true;
+    video.preload = 'auto';
+    video.setAttribute('muted', '');
+    video.setAttribute('autoplay', '');
+    video.addEventListener('volumechange', () => {
+      if (!video.muted) video.dataset.keepSound = '1';
+    });
+  }
+  let phoneFrame = 0;
+  function syncPhoneVideos() {
+    if (!isPhone()) return;
+    const videos = Array.from(document.querySelectorAll('video'));
+    const vh = window.innerHeight || 1;
+    let best = null;
+    let bestRatio = 0.4;
+    videos.forEach((video) => {
+      attachVideo(video);
+      const rect = video.getBoundingClientRect();
+      if (rect.height < 24) return;
+      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
+      const ratio = visible / rect.height;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        best = video;
+      }
+    });
+    videos.forEach((video) => {
+      if (video === best) {
+        if (video.dataset.keepSound !== '1') video.muted = true;
+        const play = video.play();
+        if (play && play.catch) play.catch(() => {});
+      } else if (!video.paused) {
+        video.pause();
+      }
+    });
+  }
+  function schedulePhoneVideos() {
+    if (phoneFrame) return;
+    phoneFrame = requestAnimationFrame(() => {
+      phoneFrame = 0;
+      syncPhoneVideos();
+    });
+  }
   function fillMedia(box, username, id, media) {
     if (!box || box.childElementCount || !media || !media.length) return;
     if (media.length > 1) box.classList.add('has-grid');
@@ -75,10 +140,21 @@
         video.className = 'feed-video';
         video.controls = true;
         video.playsInline = true;
-        video.preload = 'metadata';
+        video.preload = isPhone() ? 'auto' : 'metadata';
+        if (isPhone()) {
+          video.muted = true;
+          video.defaultMuted = true;
+          video.autoplay = true;
+          video.setAttribute('muted', '');
+          video.setAttribute('autoplay', '');
+          video.setAttribute('playsinline', '');
+          video.setAttribute('webkit-playsinline', '');
+        }
         video.src = src;
         wrap.appendChild(video);
         box.appendChild(wrap);
+        attachVideo(video);
+        schedulePhoneVideos();
         return;
       }
       if (item.type === 'photo') {
@@ -111,6 +187,7 @@
         if (text && post.html) text.innerHTML = post.html;
         fillMedia(box, username, id, post.media || []);
         collapseText(text);
+        schedulePhoneVideos();
       })
       .catch(() => {});
   }
@@ -125,7 +202,9 @@
     const more = document.createElement('button');
     more.className = 'feed-expand';
     more.type = 'button';
-    more.textContent = 'Показать всё';
+    const label = document.createElement('span');
+    label.textContent = 'Показать всё';
+    more.appendChild(label);
     more.addEventListener('click', () => {
       text.classList.remove('is-collapsed');
       more.remove();
@@ -207,6 +286,10 @@
   });
 
   bindActions(document);
+  document.querySelectorAll('video').forEach(attachVideo);
+  schedulePhoneVideos();
+  window.addEventListener('scroll', schedulePhoneVideos, { passive: true });
+  window.addEventListener('resize', schedulePhoneVideos);
   if (!list) return;
   list.querySelectorAll('.feed-item').forEach(hydrate);
 
@@ -227,6 +310,7 @@
     const fresh = Array.from(list.querySelectorAll('.feed-item')).slice(-slice.length);
     fresh.forEach(hydrate);
     bindActions(list);
+    schedulePhoneVideos();
     if (more) more.hidden = queue.length === 0;
   }
 
