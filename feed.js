@@ -103,26 +103,34 @@
     const username = key.slice(0, slash);
     const id = key.slice(slash + 1);
     const box = article.querySelector('.feed-post-media');
+    const text = article.querySelector('.feed-post-text');
     fetch('/' + encodeURIComponent(username) + '/' + encodeURIComponent(id) + '/post.json', { cache: 'no-cache' })
       .then((res) => (res.ok ? res.json() : null))
       .then((post) => {
         if (!post) return;
+        if (text && post.html) text.innerHTML = post.html;
         fillMedia(box, username, id, post.media || []);
+        collapseText(text);
       })
       .catch(() => {});
-    const text = article.querySelector('.feed-post-text');
-    if (text && text.scrollHeight > 160) {
-      text.classList.add('is-collapsed');
-      const more = document.createElement('button');
-      more.className = 'feed-expand';
-      more.type = 'button';
-      more.textContent = 'Ещё';
-      more.addEventListener('click', () => {
-        text.classList.remove('is-collapsed');
-        more.remove();
-      });
-      text.insertAdjacentElement('afterend', more);
+  }
+  function collapseText(text) {
+    if (!text || text.dataset.collapseReady === '1') return;
+    text.dataset.collapseReady = '1';
+    text.classList.add('is-collapsed');
+    if (text.scrollHeight <= text.clientHeight + 1) {
+      text.classList.remove('is-collapsed');
+      return;
     }
+    const more = document.createElement('button');
+    more.className = 'feed-expand';
+    more.type = 'button';
+    more.textContent = 'Показать всё';
+    more.addEventListener('click', () => {
+      text.classList.remove('is-collapsed');
+      more.remove();
+    });
+    text.insertAdjacentElement('afterend', more);
   }
 
   function esc(s) {
