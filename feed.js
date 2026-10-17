@@ -244,6 +244,40 @@
 
   bindActions(document);
   document.querySelectorAll('video').forEach(showFirstFrame);
+
+  const bar = document.querySelector('.site-header');
+  if (bar) {
+    let lastY = window.scrollY || 0;
+    let acc = 0;
+    let frame = 0;
+    const onScroll = () => {
+      const y = Math.max(0, window.scrollY || 0);
+      const dy = y - lastY;
+      lastY = y;
+      if (y < 8) {
+        acc = 0;
+        bar.classList.remove('is-hidden');
+        return;
+      }
+      if ((dy > 0 && acc < 0) || (dy < 0 && acc > 0)) acc = 0;
+      acc += dy;
+      if (acc > 12) {
+        bar.classList.add('is-hidden');
+        acc = 0;
+      } else if (acc < -12) {
+        bar.classList.remove('is-hidden');
+        acc = 0;
+      }
+    };
+    window.addEventListener('scroll', () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        onScroll();
+      });
+    }, { passive: true });
+  }
+
   if (!list) return;
   list.querySelectorAll('.feed-item').forEach(hydrate);
 

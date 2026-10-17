@@ -65,7 +65,7 @@ html.is-scroll-locked,html.is-scroll-locked body{overflow:hidden}
   transition:transform .28s var(--ease),background .28s var(--ease),border-color .28s var(--ease);
   will-change:transform;
 }
-.site-header.is-hidden{transform:translateY(-100%)}
+.site-header.is-hidden{transform:translateY(-100%);pointer-events:none}
 .logo{
   display:inline-flex;align-items:center;gap:8px;
   margin-left:-6px;padding:6px 12px 6px 6px;
