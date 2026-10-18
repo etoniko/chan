@@ -1,0 +1,36 @@
+{
+  "id": 108712,
+  "username": "mudak",
+  "telegramIds": [
+    108712,
+    108713,
+    108714,
+    108715
+  ],
+  "groupedId": "14338670574785714",
+  "date": "2026-10-18T14:30:22.000Z",
+  "text": "Коллеги, внимание",
+  "html": "Коллеги, внимание",
+  "title": "Коллеги внимание",
+  "description": "Коллеги, внимание",
+  "media": [
+    {
+      "type": "photo",
+      "path": "photo_1.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_2.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_3.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_4.jpg"
+    }
+  ],
+  "url": "https://chan.su/mudak/108712/",
+  "savedAt": "2026-10-18T14:30:26.342Z"
+}
