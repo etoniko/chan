@@ -1,0 +1,46 @@
+{
+  "id": 77656,
+  "username": "Cbpub",
+  "telegramIds": [
+    77656,
+    77657,
+    77658,
+    77659,
+    77660,
+    77661
+  ],
+  "groupedId": "14338568217593690",
+  "date": "2026-10-18T10:57:07.000Z",
+  "text": "Обстановка на протестах во Франции",
+  "html": "Обстановка на протестах во Франции",
+  "title": "Обстановка на протестах во Франции",
+  "description": "Обстановка на протестах во Франции",
+  "media": [
+    {
+      "type": "video",
+      "path": "video_1.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_2.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_3.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_4.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_5.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_6.mp4"
+    }
+  ],
+  "url": "https://chan.su/Cbpub/77656/",
+  "savedAt": "2026-10-18T10:57:16.176Z"
+}
