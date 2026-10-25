@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{TITLE}} — {{COUNT}} постов</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<link rel="canonical" href="{{CANONICAL}}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CHAN.SU">
+<meta property="og:title" content="{{TITLE}}">
+<meta property="og:description" content="{{DESCRIPTION}}">
+<meta property="og:url" content="{{CANONICAL}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{OG_IMAGE}}">
+<link rel="stylesheet" href="../css/style.css?v=7">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+<header class="site-header">
+  <a href="../" class="logo"><img src="/favicon.ico" alt="" width="20" height="20">CHAN.SU</a>
+</header>
+<main class="channel">
+  <div class="channel-head">
+    <span class="avatar" data-letter="{{AVATAR_LETTER}}"><img src="../photo/{{USERNAME}}.jpg" alt="" loading="lazy" onerror="this.closest('.avatar').classList.add('no-avatar')"></span>
+    <span class="info">
+      <span class="name">{{NAME}}</span>
+      <span class="handle"><span class="u">@{{USERNAME}}</span><span class="count">{{COUNT}} постов</span></span>
+    </span>
+    {{SHARE}}{{SUBSCRIBE}}
+  </div>
+  <section class="feed-list" id="feed-list" data-channel="{{USERNAME}}" aria-label="Публикации канала">
+{{POSTS}}
+  </section>
+  <div class="feed-more-wrap">
+    <button class="feed-more" id="feed-more" type="button" hidden>Показать ещё</button>
+    <p class="feed-status" id="feed-status" aria-live="polite"></p>
+    <div class="feed-sentinel" id="feed-sentinel" aria-hidden="true"></div>
+  </div>
+</main>
+<aside class="other-channels">
+  <h3>Другие каналы</h3>
+  {{OTHER_CHANNELS}}
+</aside>
+<footer class="site-footer"><span>© CHAN Social Union</span><a href="/privacy/">Конфиденциальность</a></footer>
+<script src="/feed.js?v=7" defer></script>
+</body>
+</html>
