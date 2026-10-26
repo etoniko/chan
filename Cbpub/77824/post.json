@@ -1,0 +1,36 @@
+{
+  "id": 77824,
+  "username": "Cbpub",
+  "telegramIds": [
+    77824,
+    77825,
+    77826,
+    77827
+  ],
+  "groupedId": "14344018747834626",
+  "date": "2026-10-26T08:12:23.000Z",
+  "text": "Воронеж",
+  "html": "Воронеж",
+  "title": "Воронеж",
+  "description": "Воронеж",
+  "media": [
+    {
+      "type": "video",
+      "path": "video_1.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_2.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_3.mp4"
+    },
+    {
+      "type": "video",
+      "path": "video_4.mp4"
+    }
+  ],
+  "url": "https://chan.su/Cbpub/77824/",
+  "savedAt": "2026-10-26T08:12:42.668Z"
+}
