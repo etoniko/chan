@@ -1,0 +1,36 @@
+{
+  "id": 13211,
+  "username": "tachki",
+  "telegramIds": [
+    13211,
+    13212,
+    13213,
+    13214
+  ],
+  "groupedId": "14344145288534482",
+  "date": "2026-10-26T12:36:01.000Z",
+  "text": "",
+  "html": "",
+  "title": "Пост 13211",
+  "description": "",
+  "media": [
+    {
+      "type": "photo",
+      "path": "photo_1.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_2.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_3.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_4.jpg"
+    }
+  ],
+  "url": "https://chan.su/tachki/13211/",
+  "savedAt": "2026-10-26T12:36:03.672Z"
+}
