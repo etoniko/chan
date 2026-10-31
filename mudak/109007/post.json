@@ -1,0 +1,31 @@
+{
+  "id": 109007,
+  "username": "mudak",
+  "telegramIds": [
+    109007,
+    109008,
+    109009
+  ],
+  "groupedId": "14347634712035922",
+  "date": "2026-10-31T13:45:39.000Z",
+  "text": "Просчитались, но где?",
+  "html": "Просчитались, но где?",
+  "title": "Просчитались но где",
+  "description": "Просчитались, но где?",
+  "media": [
+    {
+      "type": "photo",
+      "path": "photo_1.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_2.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_3.jpg"
+    }
+  ],
+  "url": "https://chan.su/mudak/109007/",
+  "savedAt": "2026-10-31T19:00:25.231Z"
+}
