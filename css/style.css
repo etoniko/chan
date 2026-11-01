@@ -711,7 +711,7 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
 /* coin-logo */
 .site-header{overflow:visible}
 .coin{position:relative}
-.coin-toggle{border:0;background:transparent;cursor:pointer;font:inherit}
+.coin-toggle{border:0;background:transparent;cursor:pointer;font-family:inherit;font-size:inherit;font-weight:750;letter-spacing:-.03em;color:inherit}
 .coin-live{
   margin-left:4px;padding:2px 8px;border-radius:999px;
   background:var(--acc-soft);color:#178f00;
@@ -740,3 +740,10 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
 .coin-actions a{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .coin-actions button:hover,.coin-actions a:hover{text-decoration:none}
 .coin-mint{margin:10px 0 0;color:var(--dim);font:12px/1.4 var(--mono);word-break:break-all}
+
+.coin-warn{
+  margin:12px 0 0;padding:10px 12px;border-radius:12px;
+  background:#fff3bf;color:#6b5300;
+  font-size:13px;font-weight:700;line-height:1.45;
+  box-shadow:0 0 0 1px #e6c200, 0 0 16px rgba(255,196,0,.55);
+}
