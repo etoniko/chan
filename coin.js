@@ -47,25 +47,5 @@ function bind() {
   });
 }
 
-async function loadPrice() {
-  const live = document.getElementById("coin-live");
-  if (!live) return;
-  try {
-    const res = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + MINT);
-    const data = await res.json();
-    const pair = (data.pairs || [])[0];
-    if (!pair || !pair.priceUsd) {
-      live.textContent = "нет цены";
-      return;
-    }
-    const price = Number(pair.priceUsd);
-    live.textContent = (price < 0.01 ? price.toFixed(8) : price.toFixed(4)) + " $";
-  } catch (e) {
-    live.textContent = "нет цены";
-  }
-}
-
 ensurePanel();
 bind();
-loadPrice();
-setInterval(loadPrice, 30000);
