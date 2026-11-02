@@ -747,3 +747,7 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
   font-size:13px;font-weight:700;line-height:1.45;
   box-shadow:0 0 0 1px #e6c200, 0 0 16px rgba(255,196,0,.55);
 }
+
+a.coin-live{display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
+a.coin-live:hover{text-decoration:none}
+.coin{display:inline-flex;align-items:center}
