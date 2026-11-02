@@ -1,0 +1,31 @@
+{
+  "id": 109058,
+  "username": "mudak",
+  "telegramIds": [
+    109058,
+    109059,
+    109060
+  ],
+  "groupedId": "14348952969684482",
+  "date": "2026-11-02T11:32:01.000Z",
+  "text": "Чаты поддержки. Обстановка",
+  "html": "Чаты поддержки. Обстановка",
+  "title": "Чаты поддержки. Обстановка",
+  "description": "Чаты поддержки. Обстановка",
+  "media": [
+    {
+      "type": "photo",
+      "path": "photo_1.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_2.jpg"
+    },
+    {
+      "type": "photo",
+      "path": "photo_3.jpg"
+    }
+  ],
+  "url": "https://chan.su/mudak/109058/",
+  "savedAt": "2026-11-02T11:32:08.319Z"
+}
