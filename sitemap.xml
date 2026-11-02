@@ -8517,6 +8517,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://chan.su/tachki/13320/</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://chan.su/tachki/13319/</loc>
     <lastmod>2026-11-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -9360,6 +9366,12 @@
     <loc>https://chan.su/Cbpub/</loc>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://chan.su/Cbpub/78043/</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://chan.su/Cbpub/78042/</loc>
