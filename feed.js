@@ -94,7 +94,35 @@
     const fit = () => fitPlayer(wrap, video.videoWidth, video.videoHeight);
     if (video.readyState >= 1) fit();
     else video.addEventListener('loadedmetadata', fit);
+    watchPlayback(video);
   }
+  let videoObserver = null;
+  function watchPlayback(video) {
+    if (!video || video.dataset.watch === '1' || !('IntersectionObserver' in window)) return;
+    video.dataset.watch = '1';
+    if (!videoObserver) {
+      videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target;
+          if (el.dataset.userPlayed !== '1') return;
+          if (entry.intersectionRatio <= 0.4 && !el.paused) el.pause();
+        });
+      }, { threshold: [0, 0.4, 0.75] });
+    }
+    videoObserver.observe(video);
+  }
+  function pauseOtherVideos(current) {
+    document.querySelectorAll('video').forEach((other) => {
+      if (other !== current && !other.paused) other.pause();
+    });
+  }
+  document.addEventListener('play', (event) => {
+    const video = event.target;
+    if (!video || video.tagName !== 'VIDEO') return;
+    video.dataset.userPlayed = '1';
+    watchPlayback(video);
+    pauseOtherVideos(video);
+  }, true);
   function fillMedia(box, username, id, media) {
     if (!box || box.childElementCount || !media || !media.length) return;
     if (media.length > 1) box.classList.add('has-grid');
@@ -212,6 +240,30 @@
   }
 
   const list = document.getElementById('feed-list');
+  let lockedScrollY = 0;
+  function blockLockedScroll(event) {
+    event.preventDefault();
+  }
+  function lockFeedScroll() {
+    if (document.body.classList.contains('feed-no-scroll')) return;
+    lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.style.top = '-' + lockedScrollY + 'px';
+    document.body.classList.add('feed-no-scroll');
+    window.addEventListener('touchmove', blockLockedScroll, { passive: false });
+    window.addEventListener('wheel', blockLockedScroll, { passive: false });
+  }
+  function unlockFeedScroll() {
+    if (!document.body.classList.contains('feed-no-scroll')) return;
+    document.body.classList.remove('feed-no-scroll');
+    document.body.style.top = '';
+    window.removeEventListener('touchmove', blockLockedScroll);
+    window.removeEventListener('wheel', blockLockedScroll);
+    window.scrollTo(0, lockedScrollY);
+  }
+
+  function useTouchLightbox() {
+    return window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
+  }
   function ensureLightbox() {
     let box = document.querySelector('.feed-lightbox');
     if (box) return box;
@@ -220,26 +272,230 @@
     box.innerHTML =
       '<button class="feed-lightbox-close" type="button" aria-label="Закрыть">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
-      '<div class="feed-lightbox-stage"><img class="feed-lightbox-image" alt=""></div>';
+      '<div class="feed-lightbox-stage"><img class="feed-lightbox-image" alt="" draggable="false"></div>';
     document.body.appendChild(box);
-    box.querySelector('.feed-lightbox-close').addEventListener('click', () => box.close());
+    const stage = box.querySelector('.feed-lightbox-stage');
+    const view = box.querySelector('.feed-lightbox-image');
+    const pointers = new Map();
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+    let pinch = null;
+    let single = null;
+    let moved = false;
+    let suppressClick = false;
+
+    function applyTransform() {
+      view.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scale(' + scale.toFixed(4) + ')';
+    }
+    function layoutCenter() {
+      const rect = stage.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+    function scaleAround(next, anchorX, anchorY) {
+      const center = layoutCenter();
+      const cx = center.x + tx;
+      const cy = center.y + ty;
+      const k = next / (scale || 1);
+      scale = next;
+      tx = (anchorX - (anchorX - cx) * k) - center.x;
+      ty = (anchorY - (anchorY - cy) * k) - center.y;
+    }
+    function resetTransform() {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      pinch = null;
+      single = null;
+      moved = false;
+      pointers.clear();
+      view.style.transition = '';
+      view.style.transform = '';
+      box.style.removeProperty('--lb-fade');
+    }
+    function clampPan(animate) {
+      const rect = stage.getBoundingClientRect();
+      const maxX = Math.max(0, (view.offsetWidth * scale - rect.width) / 2);
+      const maxY = Math.max(0, (view.offsetHeight * scale - rect.height) / 2);
+      tx = Math.min(maxX, Math.max(-maxX, tx));
+      ty = Math.min(maxY, Math.max(-maxY, ty));
+      view.style.transition = animate ? 'transform .2s ease' : 'none';
+      applyTransform();
+    }
+    function closeLightbox() {
+      if (typeof box.close === 'function' && box.open) box.close();
+      else {
+        box.removeAttribute('open');
+        unlockFeedScroll();
+        resetTransform();
+      }
+    }
+    function snapBack() {
+      view.style.transition = 'transform .2s ease';
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      box.style.removeProperty('--lb-fade');
+      applyTransform();
+    }
+    function dismissLightbox() {
+      const dist = Math.hypot(tx, ty) || 1;
+      view.style.transition = 'transform .18s ease';
+      tx += (tx / dist) * 180;
+      ty += (ty / dist) * 180;
+      box.style.setProperty('--lb-fade', '0');
+      applyTransform();
+      setTimeout(closeLightbox, 170);
+    }
+    function readTouches(list) {
+      for (let i = 0; i < list.length; i++) {
+        const t = list[i];
+        pointers.set(t.identifier, { x: t.clientX, y: t.clientY });
+      }
+    }
+    function dropTouches(list) {
+      for (let i = 0; i < list.length; i++) pointers.delete(list[i].identifier);
+    }
+    function points() {
+      return Array.from(pointers.values());
+    }
+    function beginPinch() {
+      const pts = points();
+      if (pts.length < 2) return;
+      single = null;
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+      pinch = {
+        dist: dist,
+        midX: (pts[0].x + pts[1].x) / 2,
+        midY: (pts[0].y + pts[1].y) / 2
+      };
+      view.style.transition = 'none';
+    }
+    function beginSingle() {
+      const pts = points();
+      if (!pts.length) return;
+      pinch = null;
+      single = { x: pts[0].x, y: pts[0].y, tx: tx, ty: ty };
+      view.style.transition = 'none';
+    }
+    box.querySelector('.feed-lightbox-close').addEventListener('click', closeLightbox);
     box.addEventListener('click', (event) => {
-      if (event.target === box || event.target.classList.contains('feed-lightbox-stage')) box.close();
+      if (suppressClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (event.target === box || event.target.classList.contains('feed-lightbox-stage')) closeLightbox();
+    });
+    box.addEventListener('close', () => {
+      unlockFeedScroll();
+      resetTransform();
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && box.open) box.close();
+      if (event.key === 'Escape' && box.open) closeLightbox();
     });
+    box.addEventListener('touchmove', (event) => {
+      if (box.classList.contains('is-touch')) event.preventDefault();
+    }, { passive: false });
+    stage.addEventListener('touchstart', (event) => {
+      if (!box.classList.contains('is-touch')) return;
+      box.classList.add('is-gesture');
+      readTouches(event.changedTouches);
+      if (pointers.size >= 2) beginPinch();
+      else beginSingle();
+    }, { passive: true });
+    stage.addEventListener('touchmove', (event) => {
+      if (!box.classList.contains('is-touch')) return;
+      event.preventDefault();
+      readTouches(event.changedTouches);
+      const pts = points();
+      if (pts.length >= 2) {
+        if (!pinch) beginPinch();
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+        const midX = (pts[0].x + pts[1].x) / 2;
+        const midY = (pts[0].y + pts[1].y) / 2;
+        const next = Math.min(4, Math.max(1, scale * (dist / pinch.dist)));
+        scaleAround(next, pinch.midX, pinch.midY);
+        tx += midX - pinch.midX;
+        ty += midY - pinch.midY;
+        pinch = { dist: dist, midX: midX, midY: midY };
+        moved = true;
+        applyTransform();
+        return;
+      }
+      if (!single || !pts.length) return;
+      const dx = pts[0].x - single.x;
+      const dy = pts[0].y - single.y;
+      if (Math.hypot(dx, dy) > 8) moved = true;
+      if (scale > 1.02) {
+        tx = single.tx + dx;
+        ty = single.ty + dy;
+        applyTransform();
+        return;
+      }
+      tx = dx;
+      ty = dy;
+      const drag = Math.hypot(dx, dy);
+      box.style.setProperty('--lb-fade', String(Math.max(0.35, 1 - drag / 360)));
+      applyTransform();
+    }, { passive: false });
+    stage.addEventListener('touchend', (event) => {
+      if (!box.classList.contains('is-touch')) return;
+      dropTouches(event.changedTouches);
+      if (pointers.size >= 2) {
+        beginPinch();
+        return;
+      }
+      if (pointers.size === 1) {
+        beginSingle();
+        return;
+      }
+      const didMove = moved;
+      pinch = null;
+      single = null;
+      box.classList.remove('is-gesture');
+      if (didMove) {
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 350);
+      }
+      if (scale > 1.02) {
+        clampPan(true);
+        moved = false;
+        return;
+      }
+      if (Math.hypot(tx, ty) > 72) dismissLightbox();
+      else snapBack();
+      moved = false;
+    });
+    stage.addEventListener('touchcancel', () => {
+      pointers.clear();
+      pinch = null;
+      single = null;
+      box.classList.remove('is-gesture');
+      if (scale > 1.02) clampPan(true);
+      else snapBack();
+    });
+    box._resetTransform = resetTransform;
     return box;
+  }
+  function openLightbox(img) {
+    const box = ensureLightbox();
+    const view = box.querySelector('.feed-lightbox-image');
+    if (box._resetTransform) box._resetTransform();
+    const touch = useTouchLightbox();
+    box.classList.toggle('is-touch', touch);
+    view.src = img.currentSrc || img.src;
+    view.alt = img.alt || '';
+    if (touch) lockFeedScroll();
+    if (box.open) return;
+    if (typeof box.showModal === 'function') box.showModal();
+    else box.setAttribute('open', '');
   }
   document.addEventListener('click', (event) => {
     const img = event.target.closest && event.target.closest('.feed-post-media img, .post-media img');
-    if (!img || !img.src) return;
-    const box = ensureLightbox();
-    const view = box.querySelector('.feed-lightbox-image');
-    view.src = img.currentSrc || img.src;
-    view.alt = img.alt || '';
-    if (typeof box.showModal === 'function') box.showModal();
-    else box.setAttribute('open', '');
+    if (!img || !img.src || img.closest('.feed-lightbox')) return;
+    event.preventDefault();
+    openLightbox(img);
   });
 
   bindActions(document);

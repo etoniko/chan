@@ -679,7 +679,12 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
 }
 
 .feed-lightbox.is-touch,
-.feed-lightbox.is-touch::backdrop{background:#000}
+.feed-lightbox.is-touch::backdrop{
+  background:rgba(0,0,0,var(--lb-fade,1));
+  transition:background-color .18s ease
+}
+.feed-lightbox.is-touch.is-gesture,
+.feed-lightbox.is-touch.is-gesture::backdrop{transition:none}
 .feed-lightbox.is-touch,
 .feed-lightbox.is-touch *{-webkit-tap-highlight-color:transparent}
 .feed-lightbox.is-touch{padding:0}
@@ -690,8 +695,13 @@ video:fullscreen::backdrop,video:-webkit-full-screen::backdrop{background:#000}
   overflow:hidden;background:#000;touch-action:none
 }
 .feed-lightbox.is-touch .feed-lightbox-image{
-  width:100%;height:auto;max-width:100%;max-height:none;
-  border-radius:0;object-fit:contain;touch-action:none
+  width:100vw;max-width:100vw;height:auto;max-height:none;
+  border-radius:0;object-fit:contain;touch-action:none;
+  transform-origin:center center;will-change:transform
+}
+body.feed-no-scroll{
+  position:fixed;left:0;right:0;width:100%;
+  overflow:hidden;overscroll-behavior:none;touch-action:none
 }
 .feed-lightbox.is-touch .feed-lightbox-image.is-shown{animation:none}
 .feed-lightbox.is-touch .feed-lightbox-close{
