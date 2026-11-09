@@ -43,6 +43,20 @@
           "path": "/media/nvv0ifb4.jpg"
         }
       ]
+    },
+    {
+      "id": 109192,
+      "date": "2026-11-09T18:13:52.000Z",
+      "title": "Рабочий лайфхак",
+      "description": "Рабочий лайфхак?",
+      "text": "Рабочий лайфхак?",
+      "html": "Рабочий лайфхак?",
+      "media": [
+        {
+          "type": "video",
+          "path": "/media/hzylxzyg.mp4"
+        }
+      ]
     }
   ]
 }
