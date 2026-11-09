@@ -1,0 +1,29 @@
+{
+  "channels": [
+    {
+      "username": "toporlive",
+      "title": "Топор Live",
+      "telegram": "https://t.me/toporlive"
+    },
+    {
+      "username": "moscowach",
+      "title": "Москвач • Новости Москвы",
+      "telegram": "https://t.me/moscowach"
+    },
+    {
+      "username": "tachki",
+      "title": "Тачки и Точка",
+      "telegram": "https://t.me/tachki"
+    },
+    {
+      "username": "Cbpub",
+      "title": "КБ",
+      "telegram": "https://t.me/Cbpub"
+    },
+    {
+      "username": "mudak",
+      "title": "MDK",
+      "telegram": "https://t.me/c/1006147755"
+    }
+  ]
+}
