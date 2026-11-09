@@ -7,5 +7,28 @@
     "title": "MDK",
     "description": "Добро пожаловать в интернет!\n\nРеклама: @senyatret \n\nСотрудничаем: telega.in/c/mudak\n@Spiral_Yuri\n@reklama_nikita\n@oldpurple\n\n\nРКН: https://vk.cc/cIdF57"
   },
-  "posts": []
+  "posts": [
+    {
+      "id": 109189,
+      "date": "2026-11-09T15:51:17.000Z",
+      "title": "Тайное хобби айтишников",
+      "description": "Тайное хобби айтишников",
+      "text": "Тайное хобби айтишников",
+      "html": "Тайное хобби айтишников",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/8tru3axl.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/dr7zva5u.jpg"
+        }
+      ],
+      "msgs": [
+        109189,
+        109190
+      ]
+    }
+  ]
 }
