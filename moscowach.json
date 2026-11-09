@@ -57,6 +57,63 @@
           "path": "/media/1cr7kvxe.mp4"
         }
       ]
+    },
+    {
+      "id": 44363,
+      "date": "2026-11-09T20:40:38.000Z",
+      "title": "Москва припорошенная снегом просто прекрасна.",
+      "description": "❄️ Москва, припорошенная снегом, просто прекрасна. Фото: kozlovp__",
+      "text": "❄️ Москва, припорошенная снегом, просто прекрасна. \n\nФото: kozlovp__",
+      "html": "❄️ Москва, припорошенная снегом, просто прекрасна. <br><br><i>Фото: kozlovp__</i>",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/ji8yssiu.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/xobgu3mq.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/rnkjvdtf.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/7boym7aa.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/9gpncvj5.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/n5e62i1v.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/g53dc0n3.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/gecf958h.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/baeo8sa2.jpg"
+        }
+      ],
+      "msgs": [
+        44363,
+        44364,
+        44365,
+        44366,
+        44367,
+        44368,
+        44369,
+        44370,
+        44371
+      ]
     }
   ]
 }
