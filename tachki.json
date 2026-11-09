@@ -21,6 +21,43 @@
           "path": "/media/c3pnpapu.jpg"
         }
       ]
+    },
+    {
+      "id": 13435,
+      "date": "2026-11-09T18:41:01.000Z",
+      "title": "Шесть машин из GTA VI перенесли в реальность ателье West Coast Customs построило их совместно с Rockstar.",
+      "description": "Шесть машин из GTA VI перенесли в реальность — ателье West Coast Customs построило их совместно с Rockstar. В коллекцию вошли Ferrari Testarossa, Lamborghini Huracan, McLaren Se…",
+      "text": "Шесть машин из GTA VI перенесли в реальность — ателье West Coast Customs построило их совместно с Rockstar.\n\nВ коллекцию вошли Ferrari Testarossa, Lamborghini Huracan, McLaren Senna, Corvette C8 и два американских маслкара.\n\n🚙 Тачки и Точка",
+      "html": "<b>Шесть машин из GTA VI перенесли в реальность</b> — ателье West Coast Customs построило их совместно с Rockstar.<br><br>В коллекцию вошли Ferrari Testarossa, Lamborghini Huracan, McLaren Senna, Corvette C8 и <b>два американских маслкара</b>.<br><br>🚙 Тачки и Точка",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/9viclmz2.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/29lh57x0.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/bk0lgwq5.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/osubn6pz.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/ghip7ll2.jpg"
+        }
+      ],
+      "msgs": [
+        13435,
+        13436,
+        13437,
+        13438,
+        13439
+      ]
     }
   ]
 }
