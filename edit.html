@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мини-редактор</title>
+<style>
+  :root{
+    --bg:#f5f5f5;
+    --panel:#ffffff;
+    --text:#1a1a1a;
+    --muted:#8a8a8a;
+    --border:#e6e6e6;
+    --accent:#1a1a1a;
+    --accent-soft:#f0f0f0;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    height:100vh;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    user-select:none;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 16px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+    z-index:10;
+  }
+  header .logo{
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:-0.2px;
+    margin-right:12px;
+  }
+  header .spacer{flex:1}
+  .size-badge{
+    font-size:12px;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    padding:5px 10px;
+    background:var(--accent-soft);
+    border-radius:var(--radius);
+    white-space:nowrap;
+    min-width:80px;
+    text-align:center;
+  }
+  .btn{
+    font:inherit;
+    font-size:13px;
+    padding:7px 14px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--text);
+    cursor:pointer;
+    transition:.15s;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    white-space:nowrap;
+  }
+  .btn:hover{background:var(--accent-soft)}
+  .btn:active{transform:scale(0.98)}
+  .btn.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  .btn.primary:hover{opacity:.85}
+  .btn.small{padding:5px 10px;font-size:12px}
+
+  main{
+    flex:1;
+    display:flex;
+    overflow:hidden;
+    min-height:0;
+  }
+
+  aside.left{
+    width:180px;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    padding:14px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    overflow-y:auto;
+    flex-shrink:0;
+  }
+  .panel-title{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    padding:6px 8px 4px;
+  }
+  .tool{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:13.5px;
+    transition:.15s;
+  }
+  .tool:hover{background:var(--accent-soft)}
+  .tool.active{background:var(--accent);color:#fff}
+  .tool svg{width:18px;height:18px;flex-shrink:0}
+
+  .canvas-area{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+    background:
+      repeating-conic-gradient(#e8e8e8 0% 25%, #f7f7f7 0% 50%) 50%/20px 20px;
+    padding:20px;
+  }
+  .canvas-wrap{
+    position:relative;
+    background:transparent;
+    box-shadow:0 4px 24px rgba(0,0,0,.10);
+    border-radius:2px;
+    max-width:100%;
+    max-height:100%;
+    background-image:
+      repeating-conic-gradient(#e8e8e8 0% 25%, #f7f7f7 0% 50%);
+    background-size:20px 20px;
+  }
+  #mainCanvas{
+    display:block;
+    cursor:crosshair;
+    touch-action:none;
+    max-width:100%;
+    max-height:calc(100vh - 120px);
+    object-fit:contain;
+    background:transparent;
+  }
+
+  /* ── Overlay обрезки ── */
+  .crop-overlay{
+    position:absolute;
+    inset:0;
+    /* слой больше не блокирует события — только дети, которым нужно */
+    pointer-events:none;
+    z-index:5;
+  }
+  .crop-rect{
+    position:absolute;
+    border:1px solid rgba(255,255,255,.95);
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+    display:none;
+    pointer-events:none;
+  }
+  .crop-rect.ready{
+    border-color:#4ade80;
+  }
+  .crop-rect::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    border:1px dashed rgba(255,255,255,.5);
+    pointer-events:none;
+  }
+  .crop-grid{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.25) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.25) 1px, transparent 1px);
+    background-size:33.333% 33.333%;
+    background-position:-1px -1px;
+    opacity:0;
+    transition:opacity .15s;
+  }
+  .crop-rect.ready .crop-grid{opacity:1}
+
+  .crop-label{
+    position:absolute;
+    top:-26px;
+    left:0;
+    background:var(--accent);
+    color:#fff;
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:6px;
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+    pointer-events:none;
+  }
+
+  /* ручки */
+  .crop-handle{
+    position:absolute;
+    width:14px;
+    height:14px;
+    background:#fff;
+    border:1.5px solid #333;
+    border-radius:3px;
+    pointer-events:auto;
+    display:none;
+    box-shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+  .crop-rect.ready .crop-handle{display:block}
+  .crop-handle[data-h="nw"]{left:-7px; top:-7px; cursor:nwse-resize}
+  .crop-handle[data-h="n"] {left:calc(50% - 7px); top:-7px; cursor:ns-resize}
+  .crop-handle[data-h="ne"]{right:-7px; top:-7px; cursor:nesw-resize}
+  .crop-handle[data-h="e"] {right:-7px; top:calc(50% - 7px); cursor:ew-resize}
+  .crop-handle[data-h="se"]{right:-7px; bottom:-7px; cursor:nwse-resize}
+  .crop-handle[data-h="s"] {left:calc(50% - 7px); bottom:-7px; cursor:ns-resize}
+  .crop-handle[data-h="sw"]{left:-7px; bottom:-7px; cursor:nesw-resize}
+  .crop-handle[data-h="w"] {left:-7px; top:calc(50% - 7px); cursor:ew-resize}
+
+  /* тащим за внутренность рамки */
+  .crop-move{
+    position:absolute;
+    inset:0;
+    cursor:move;
+    pointer-events:auto;
+    display:none;
+  }
+  .crop-rect.ready .crop-move{display:block}
+
+  .crop-actions{
+    position:absolute;
+    top:-34px;
+    right:0;
+    display:none;
+    gap:4px;
+    pointer-events:auto;
+  }
+  .crop-rect.ready .crop-actions{display:flex}
+  .crop-actions .btn{
+    padding:3px 8px;
+    font-size:11px;
+    border-radius:6px;
+  }
+
+  .drop-hint{
+    position:absolute;
+    inset:20px;
+    border:2px dashed #bbb;
+    border-radius:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--muted);
+    font-size:14px;
+    pointer-events:none;
+    opacity:0;
+    transition:.2s;
+    background:rgba(245,245,245,.8);
+    backdrop-filter:blur(2px);
+  }
+  .canvas-area.dragover .drop-hint{opacity:1}
+
+  aside.right{
+    width:220px;
+    background:var(--panel);
+    border-left:1px solid var(--border);
+    padding:14px;
+    overflow-y:auto;
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .section{display:flex;flex-direction:column;gap:8px}
+  .section-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    font-weight:500;
+  }
+  .row{display:flex;align-items:center;gap:8px}
+  .row label{font-size:13px;color:var(--muted);min-width:40px}
+  input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    flex:1;
+    height:4px;
+    border-radius:2px;
+    background:var(--border);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--accent);
+    cursor:pointer;
+    border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--border);
+  }
+  input[type=color]{
+    width:32px;height:32px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:2px;
+    background:var(--panel);
+    cursor:pointer;
+  }
+  .val{
+    font-size:12px;
+    color:var(--muted);
+    min-width:32px;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .input-text{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    font:inherit;
+    font-size:13px;
+    outline:none;
+    transition:.15s;
+  }
+  .input-text:focus{border-color:var(--accent)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    font-size:12px;
+    padding:6px 10px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    cursor:pointer;
+    background:var(--panel);
+    transition:.15s;
+  }
+  .chip:hover{background:var(--accent-soft)}
+  .chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .hint{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .divider{height:1px;background:var(--border);margin:2px 0}
+
+  .switch{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    cursor:pointer;
+    padding:4px 0;
+  }
+  .switch input{display:none}
+  .switch .track{
+    width:34px;height:20px;
+    background:var(--border);
+    border-radius:999px;
+    position:relative;
+    transition:.2s;
+    flex-shrink:0;
+  }
+  .switch .track::after{
+    content:'';
+    position:absolute;
+    top:2px;left:2px;
+    width:16px;height:16px;
+    background:#fff;
+    border-radius:50%;
+    transition:.2s;
+    box-shadow:0 1px 2px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked + .track::after{left:16px}
+
+  #fileInput{display:none}
+
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:#ccc}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">✎ Редактор</span>
+  <span class="size-badge" id="sizeBadge">800 × 600</span>
+  <div class="spacer"></div>
+  <button class="btn primary" id="btnPng">PNG</button>
+  <button class="btn" id="btnJpeg">JPEG</button>
+  <button class="btn" id="btnSvg">SVG</button>
+  <button class="btn" id="btnIco">ICO</button>
+  <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
+  <button class="btn primary" id="btnExport">Скачать</button>
+</header>
+
+<main>
+  <aside class="left">
+    <div class="panel-title">Инструменты</div>
+    <div class="tool active" data-tool="pen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+      Ручка
+    </div>
+    <div class="tool" data-tool="eraser">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a1 1 0 010-1.4l9-9a1 1 0 011.4 0l6 6a1 1 0 010 1.4L11 20"/><path d="M6 11l7 7"/></svg>
+      Ластик
+    </div>
+    <div class="tool" data-tool="text">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      Текст
+    </div>
+    <div class="tool" data-tool="crop">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 002 2h14"/><path d="M18 22V8a2 2 0 00-2-2H2"/></svg>
+      Обрезка
+    </div>
+    <div class="tool" data-tool="move">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+      Перемещение
+    </div>
+
+    <div class="divider" style="margin:8px 0"></div>
+    <div class="panel-title">Изображение</div>
+    <button class="btn small" id="btnUpload" style="justify-content:flex-start">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Загрузить
+    </button>
+    <button class="btn small" id="btnPaste" style="justify-content:flex-start">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+      Из буфера
+    </button>
+
+    <div class="divider" style="margin:8px 0"></div>
+    <div class="panel-title">Подгонка</div>
+    <button class="btn small" id="btnFit" style="justify-content:flex-start">⤢ По границам</button>
+    <div class="chips" style="margin-top:2px">
+      <div class="chip" data-ratio="1:1">1:1</div>
+      <div class="chip" data-ratio="4:3">4:3</div>
+      <div class="chip" data-ratio="16:9">16:9</div>
+      <div class="chip" data-ratio="9:16">9:16</div>
+    </div>
+  </aside>
+
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="mainCanvas" width="800" height="600"></canvas>
+      <div class="crop-overlay" id="cropOverlay">
+        <div class="crop-rect" id="cropRect">
+          <div class="crop-grid"></div>
+          <div class="crop-move" data-h="move"></div>
+          <div class="crop-handle" data-h="nw"></div>
+          <div class="crop-handle" data-h="n"></div>
+          <div class="crop-handle" data-h="ne"></div>
+          <div class="crop-handle" data-h="e"></div>
+          <div class="crop-handle" data-h="se"></div>
+          <div class="crop-handle" data-h="s"></div>
+          <div class="crop-handle" data-h="sw"></div>
+          <div class="crop-handle" data-h="w"></div>
+          <div class="crop-label" id="cropLabel">0 × 0</div>
+          <div class="crop-actions">
+            <button class="btn primary" id="cropApply">Применить</button>
+            <button class="btn" id="cropCancel">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="drop-hint">Отпустите файл здесь</div>
+  </div>
+
+  <aside class="right">
+    <div class="section">
+      <div class="section-label">Размер кисти</div>
+      <div class="row">
+        <input type="range" id="brushSize" min="1" max="100" value="4">
+        <span class="val" id="brushSizeVal">4</span>
+      </div>
+    </div>
+
+    <div class="section" id="textSection" style="display:none">
+      <div class="section-label">Текст</div>
+      <input type="text" class="input-text" id="textInput" placeholder="Введите текст…">
+      <div class="row">
+        <label>Размер</label>
+        <input type="range" id="fontSize" min="8" max="120" value="24">
+        <span class="val" id="fontSizeVal">24</span>
+      </div>
+    </div>
+
+    <!-- пропорции обрезки -->
+    <div class="section" id="cropRatioSection" style="display:none">
+      <div class="section-label">Пропорции обрезки</div>
+      <div class="chips" id="cropRatioChips">
+        <div class="chip active" data-crop-ratio="free">Свободно</div>
+        <div class="chip" data-crop-ratio="1:1">1:1</div>
+        <div class="chip" data-crop-ratio="4:3">4:3</div>
+        <div class="chip" data-crop-ratio="16:9">16:9</div>
+        <div class="chip" data-crop-ratio="9:16">9:16</div>
+        <div class="chip" data-crop-ratio="3:2">3:2</div>
+      </div>
+      <div class="hint">Тяни за ручки, чтобы подогнать. Enter — применить.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Цвет</div>
+      <div class="row">
+        <input type="color" id="colorPicker" value="#1a1a1a">
+        <span class="hint">Цвет кисти / текста</span>
+      </div>
+      <div class="row">
+        <input type="color" id="bgColor" value="#ffffff">
+        <span class="hint">Фон (для JPEG-экспорта)</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="showBg">
+        <span class="track"></span>
+        Показывать фон на канвасе
+      </label>
+      <button class="btn small" id="btnTransparent">Прозрачный фон</button>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Действия</div>
+      <button class="btn small" id="btnUndo">↶ Отменить</button>
+      <button class="btn small" id="btnClear">Очистить всё</button>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Инфо</div>
+      <div class="hint" id="info">800 × 600 px</div>
+    </div>
+  </aside>
+</main>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+(() => {
+  // ───── Слои ─────
+  const canvas = document.getElementById('mainCanvas');
+  const realCtx = canvas.getContext('2d');
+
+  const content = document.createElement('canvas');
+  content.width = canvas.width;
+  content.height = canvas.height;
+  const ctx = content.getContext('2d');
+
+  const area = document.getElementById('canvasArea');
+
+  let tool = 'pen';
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+  let brushSize = 4;
+  let color = '#1a1a1a';
+  let fontSize = 24;
+
+  let bgColor = '#ffffff';
+  let showBg = false;
+
+  let origW = canvas.width;
+  let origH = canvas.height;
+
+  const history = [];
+  const MAX_HISTORY = 30;
+
+  // ───── Композит ─────
+  function render() {
+    realCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (showBg && bgColor) {
+      realCtx.fillStyle = bgColor;
+      realCtx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    realCtx.drawImage(content, 0, 0);
+    updateInfo();
+  }
+  render();
+
+  function updateInfo() {
+    document.getElementById('info').textContent = `${canvas.width} × ${canvas.height} px`;
+    document.getElementById('sizeBadge').textContent = `${canvas.width} × ${canvas.height}`;
+  }
+
+  // ───── Инструменты ─────
+  document.querySelectorAll('.tool').forEach(el => {
+    el.addEventListener('click', () => {
+      if (tool === 'crop' && tool !== el.dataset.tool) cancelCrop();
+      document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      tool = el.dataset.tool;
+      document.getElementById('textSection').style.display = tool === 'text' ? 'flex' : 'none';
+      document.getElementById('cropRatioSection').style.display = tool === 'crop' ? 'flex' : 'none';
+      updateCursor();
+    });
+  });
+
+  function updateCursor() {
+    const cursors = { pen:'crosshair', eraser:'cell', text:'text', crop:'crosshair', move:'move' };
+    canvas.style.cursor = cursors[tool] || 'default';
+  }
+  updateCursor();
+
+  // ───── UI ─────
+  const brushRange = document.getElementById('brushSize');
+  const brushVal = document.getElementById('brushSizeVal');
+  brushRange.addEventListener('input', () => {
+    brushSize = +brushRange.value;
+    brushVal.textContent = brushSize;
+  });
+
+  document.getElementById('colorPicker').addEventListener('input', e => color = e.target.value);
+
+  document.getElementById('bgColor').addEventListener('input', e => {
+    bgColor = e.target.value;
+    if (showBg) render();
+  });
+
+  document.getElementById('showBg').addEventListener('change', e => {
+    showBg = e.target.checked;
+    render();
+  });
+
+  document.getElementById('btnTransparent').addEventListener('click', () => {
+    bgColor = null;
+    showBg = false;
+    document.getElementById('showBg').checked = false;
+    render();
+  });
+
+  const fontRange = document.getElementById('fontSize');
+  const fontVal = document.getElementById('fontSizeVal');
+  fontRange.addEventListener('input', () => {
+    fontSize = +fontRange.value;
+    fontVal.textContent = fontSize;
+  });
+
+  // ───── История ─────
+  function pushHistory() {
+    try {
+      history.push(content.toDataURL('image/png'));
+      if (history.length > MAX_HISTORY) history.shift();
+    } catch(e) {}
+  }
+  function undo() {
+    if (history.length < 1) return;
+    const url = history.pop();
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, content.width, content.height);
+      ctx.drawImage(img, 0, 0);
+      render();
+    };
+    img.src = url;
+  }
+  document.getElementById('btnUndo').addEventListener('click', undo);
+  document.getElementById('btnClear').addEventListener('click', () => {
+    pushHistory();
+    ctx.clearRect(0, 0, content.width, content.height);
+    render();
+  });
+
+  // ───── Позиция ─────
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
+    return {
+      x: (e.clientX - r.left) * scaleX,
+      y: (e.clientY - r.top) * scaleY
+    };
+  }
+
+  // ───── Рисование ─────
+  function drawLine(x0, y0, x1, y1) {
+    ctx.save();
+    if (tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+    }
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.restore();
+    render();
+  }
+
+  function moveDraw(e) {
+    if (!drawing) return;
+    const p = getPos(e);
+    drawLine(lastX, lastY, p.x, p.y);
+    lastX = p.x; lastY = p.y;
+  }
+
+  // ───── Текст ─────
+  function placeText(e) {
+    const input = document.getElementById('textInput');
+    const txt = input.value.trim();
+    if (!txt) { input.focus(); return; }
+    pushHistory();
+    const p = getPos(e);
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = `${fontSize}px system-ui, sans-serif`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(txt, p.x, p.y);
+    ctx.restore();
+    render();
+  }
+
+  // ───── ОБРЕЗКА (интерактивная, с пропорциями) ─────
+  const cropRectEl = document.getElementById('cropRect');
+  const cropLabelEl = document.getElementById('cropLabel');
+
+  let cropBox = null;          // {x, y, w, h} в координатах канваса
+  let cropActive = false;
+  let cropRatio = null;        // null = свободно, иначе число a/b
+
+  let dragMode = null;         // 'move' | 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se' | 'create'
+  let dragStart = null;        // {x, y} старт в координатах канваса
+  let dragOrigin = null;       // {x, y, w, h} исходная рамка
+
+  function showCropUI() {
+    cropRectEl.style.display = 'block';
+    cropActive = true;
+    cropRectEl.classList.add('ready');
+    updateCropUI();
+  }
+  function hideCropUI() {
+    cropRectEl.style.display = 'none';
+    cropRectEl.classList.remove('ready');
+    cropActive = false;
+    cropBox = null;
+    dragMode = null;
+    dragStart = null;
+    dragOrigin = null;
+  }
+  function cancelCrop() { hideCropUI(); }
+
+  function updateCropUI() {
+    if (!cropBox) return;
+    const scaleX = canvas.clientWidth / canvas.width;
+    const scaleY = canvas.clientHeight / canvas.height;
+    cropRectEl.style.left = (cropBox.x * scaleX) + 'px';
+    cropRectEl.style.top = (cropBox.y * scaleY) + 'px';
+    cropRectEl.style.width = (cropBox.w * scaleX) + 'px';
+    cropRectEl.style.height = (cropBox.h * scaleY) + 'px';
+    cropLabelEl.textContent = `${Math.round(cropBox.w)} × ${Math.round(cropBox.h)} px`;
+  }
+
+  function clampBox(b) {
+    let {x, y, w, h} = b;
+    w = Math.max(1, Math.min(w, canvas.width));
+    h = Math.max(1, Math.min(h, canvas.height));
+    x = Math.max(0, Math.min(x, canvas.width - w));
+    y = Math.max(0, Math.min(y, canvas.height - h));
+    return {x, y, w, h};
+  }
+
+  // привести рамку к нужной пропорции (по большей стороне)
+  function fitToRatio(box, ratio) {
+    if (!ratio) return box;
+    let {x, y, w, h} = box;
+    if (w / h > ratio) {
+      // слишком широко — урезаем ширину
+      const nw = h * ratio;
+      x += (w - nw) / 2;
+      w = nw;
+    } else {
+      const nh = w / ratio;
+      y += (h - nh) / 2;
+      h = nh;
+    }
+    return clampBox({x, y, w, h});
+  }
+
+  // UI: чипы пропорций обрезки
+  document.querySelectorAll('[data-crop-ratio]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('[data-crop-ratio]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const v = chip.dataset.cropRatio;
+      if (v === 'free') {
+        cropRatio = null;
+      } else {
+        const [a, b] = v.split(':').map(Number);
+        cropRatio = a / b;
+      }
+      // подгоняем текущую рамку
+      if (cropBox && cropRatio) {
+        cropBox = fitToRatio(cropBox, cropRatio);
+        updateCropUI();
+      }
+    });
+  });
+
+  function applyCrop() {
+    if (!cropBox) return;
+    const r = clampBox(cropBox);
+    if (r.w < 2 || r.h < 2) { cancelCrop(); return; }
+
+    pushHistory();
+
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.round(r.w);
+    tmp.height = Math.round(r.h);
+    tmp.getContext('2d').drawImage(content, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+
+    content.width = Math.round(r.w);
+    content.height = Math.round(r.h);
+    ctx.clearRect(0, 0, content.width, content.height);
+    ctx.drawImage(tmp, 0, 0);
+
+    canvas.width = content.width;
+    canvas.height = content.height;
+
+    origW = content.width;
+    origH = content.height;
+
+    hideCropUI();
+    render();
+  }
+
+  document.getElementById('cropApply').addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+  });
+  document.getElementById('cropApply').addEventListener('click', (e) => {
+    e.stopPropagation();
+    applyCrop();
+  });
+  document.getElementById('cropCancel').addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+  });
+  document.getElementById('cropCancel').addEventListener('click', (e) => {
+    e.stopPropagation();
+    cancelCrop();
+  });
+
+  // ───── Указатель ─────
+  // pointerdown на канвасе:
+  //  - если попали в ручку/внутренность рамки — обрабатывается отдельно (см. ниже)
+  //  - иначе, если tool === 'crop' — старт нового выделения
+  canvas.addEventListener('pointerdown', (e) => {
+    // игнорируем, если событие на самом деле пришло от рамки (не должно, но подстрахуемся)
+    if (e.target.closest('.crop-rect')) return;
+
+    if (tool === 'crop') {
+      const p = getPos(e);
+      dragMode = 'create';
+      dragStart = p;
+      cropBox = {x: p.x, y: p.y, w: 0, h: 0};
+      showCropUI();
+      return;
+    }
+    if (tool === 'text') { placeText(e); return; }
+    if (tool === 'move') return;
+
+    pushHistory();
+    drawing = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+    drawLine(p.x, p.y, p.x, p.y);
+  });
+
+  // pointerdown на рамке: ручки и внутренность
+  cropRectEl.addEventListener('pointerdown', (e) => {
+    if (!cropActive) return;
+    const handleEl = e.target.closest('[data-h]');
+    if (!handleEl) return;
+    const mode = handleEl.dataset.h;
+    if (!mode) return;
+
+    e.stopPropagation();
+    e.preventDefault();
+
+    dragMode = mode;
+    dragStart = getPos(e);
+    dragOrigin = {...cropBox};
+    try { cropRectEl.setPointerCapture(e.pointerId); } catch(_) {}
+  });
+
+  // движение: вешаем на window, чтобы не терять события
+  window.addEventListener('pointermove', (e) => {
+    if (tool === 'crop') {
+      if (!dragMode || !dragStart) return;
+      const p = getPos(e);
+
+      if (dragMode === 'create') {
+        const x = Math.min(dragStart.x, p.x);
+        const y = Math.min(dragStart.y, p.y);
+        let w = Math.abs(p.x - dragStart.x);
+        let h = Math.abs(p.y - dragStart.y);
+
+        // если включена пропорция — подгоняем под неё от угла старта
+        if (cropRatio && w > 0 && h > 0) {
+          if (w / h > cropRatio) w = h * cropRatio;
+          else h = w / cropRatio;
+        }
+
+        cropBox = clampBox({x, y, w, h});
+        updateCropUI();
+        return;
+      }
+
+      const dx = p.x - dragStart.x;
+      const dy = p.y - dragStart.y;
+      let o = {...dragOrigin};
+      let nx = o.x, ny = o.y, nw = o.w, nh = o.h;
+
+      if (dragMode === 'move') {
+        nx = o.x + dx;
+        ny = o.y + dy;
+        // при перемещении пропорция сохраняется
+        if (cropRatio) {
+          nh = nw / cropRatio;
+        }
+      } else {
+        if (dragMode.includes('w')) { nx = o.x + dx; nw = o.w - dx; }
+        if (dragMode.includes('e')) { nw = o.w + dx; }
+        if (dragMode.includes('n')) { ny = o.y + dy; nh = o.h - dy; }
+        if (dragMode.includes('s')) { nh = o.h + dy; }
+
+        if (cropRatio) {
+          // держим пропорцию: сторона, которую тянем, главная
+          const horiz = dragMode.includes('w') || dragMode.includes('e');
+          const vert  = dragMode.includes('n') || dragMode.includes('s');
+
+          if (horiz && !vert) {
+            nh = nw / cropRatio;
+            if (dragMode.includes('n')) ny = o.y + (o.h - nh);
+          } else if (vert && !horiz) {
+            nw = nh * cropRatio;
+            if (dragMode.includes('w')) nx = o.x + (o.w - nw);
+          } else {
+            // угол — берём больший размер
+            if (nw / nh > cropRatio) {
+              nw = nh * cropRatio;
+              if (dragMode.includes('w')) nx = o.x + (o.w - nw);
+            } else {
+              nh = nw / cropRatio;
+              if (dragMode.includes('n')) ny = o.y + (o.h - nh);
+            }
+          }
+        }
+
+        if (nw < 2) { nw = 2; if (dragMode.includes('w')) nx = o.x + o.w - nw; }
+        if (nh < 2) { nh = 2; if (dragMode.includes('n')) ny = o.y + o.h - nh; }
+      }
+
+      cropBox = clampBox({x: nx, y: ny, w: nw, h: nh});
+      updateCropUI();
+      return;
+    }
+
+    moveDraw(e);
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (tool === 'crop') {
+      dragMode = null;
+      dragStart = null;
+      dragOrigin = null;
+      return;
+    }
+    if (drawing) drawing = false;
+  });
+
+  // Enter — применить, Esc — отменить
+  window.addEventListener('keydown', (e) => {
+    if (tool === 'crop' && cropActive) {
+      if (e.key === 'Enter') { e.preventDefault(); applyCrop(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); cancelCrop(); return; }
+    }
+    if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      undo();
+    }
+  });
+
+  // ───── Пропорции холста (проекта) ─────
+  document.querySelectorAll('.chip[data-ratio]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const wasActive = chip.classList.contains('active');
+      document.querySelectorAll('.chip[data-ratio]').forEach(c => c.classList.remove('active'));
+
+      if (wasActive) {
+        applyCanvasSize(origW, origH);
+        return;
+      }
+
+      chip.classList.add('active');
+      const [a, b] = chip.dataset.ratio.split(':').map(Number);
+      const ratio = a / b;
+
+      let w, h;
+      if (canvas.width / canvas.height > ratio) {
+        h = canvas.height;
+        w = Math.round(h * ratio);
+      } else {
+        w = canvas.width;
+        h = Math.round(w / ratio);
+      }
+
+      applyCanvasSize(w, h);
+    });
+  });
+
+  function applyCanvasSize(w, h) {
+    pushHistory();
+
+    const snapshot = document.createElement('canvas');
+    snapshot.width = content.width;
+    snapshot.height = content.height;
+    snapshot.getContext('2d').drawImage(content, 0, 0);
+
+    content.width = w;
+    content.height = h;
+    ctx.clearRect(0, 0, w, h);
+
+    const dx = Math.round((w - snapshot.width) / 2);
+    const dy = Math.round((h - snapshot.height) / 2);
+    ctx.drawImage(snapshot, dx, dy);
+
+    canvas.width = w;
+    canvas.height = h;
+
+    render();
+  }
+
+  // «По границам»
+  document.getElementById('btnFit').addEventListener('click', () => {
+    const bbox = getContentBBox();
+    if (!bbox) return;
+    pushHistory();
+    const tmp = document.createElement('canvas');
+    tmp.width = content.width;
+    tmp.height = content.height;
+    tmp.getContext('2d').drawImage(content, 0, 0);
+
+    content.width = bbox.w;
+    content.height = bbox.h;
+    ctx.clearRect(0, 0, bbox.w, bbox.h);
+    ctx.drawImage(tmp, bbox.x, bbox.y, bbox.w, bbox.h, 0, 0, bbox.w, bbox.h);
+
+    canvas.width = bbox.w;
+    canvas.height = bbox.h;
+
+    origW = bbox.w;
+    origH = bbox.h;
+    render();
+  });
+
+  function getContentBBox() {
+    try {
+      const data = ctx.getImageData(0, 0, content.width, content.height).data;
+      let minX = content.width, minY = content.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < content.height; y++) {
+        for (let x = 0; x < content.width; x++) {
+          const a = data[(y * content.width + x) * 4 + 3];
+          if (a > 0) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < 0) return null;
+      return {x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1};
+    } catch(e) { return null; }
+  }
+
+  // ───── Загрузка ─────
+  function loadImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        pushHistory();
+
+        content.width = img.naturalWidth;
+        content.height = img.naturalHeight;
+        ctx.clearRect(0, 0, content.width, content.height);
+        ctx.drawImage(img, 0, 0);
+
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        realCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+        origW = img.naturalWidth;
+        origH = img.naturalHeight;
+
+        document.querySelectorAll('.chip[data-ratio]').forEach(c => c.classList.remove('active'));
+        hideCropUI();
+
+        render();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('btnUpload').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadImageFile(e.target.files[0]);
+    fileInput.value = '';
+  });
+
+  // ───── Вставка из буфера ─────
+  document.getElementById('btnPaste').addEventListener('click', async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imgType = item.types.find(t => t.startsWith('image/'));
+        if (imgType) {
+          const blob = await item.getType(imgType);
+          const file = new File([blob], 'clipboard.png', {type: imgType});
+          loadImageFile(file);
+          return;
+        }
+      }
+      alert('В буфере нет изображения');
+    } catch (err) {
+      alert('Не удалось прочитать буфер обмена. Разрешите доступ.');
+    }
+  });
+
+  // ───── Drag & Drop ─────
+  area.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    area.classList.add('dragover');
+  });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', (e) => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadImageFile(file);
+  });
+
+  // ───── Экспорт ─────
+  let exportFormat = 'png';
+
+  ['btnPng','btnJpeg','btnSvg','btnIco'].forEach(id => {
+    document.getElementById(id).addEventListener('click', () => {
+      exportFormat = id.slice(3).toLowerCase();
+      ['btnPng','btnJpeg','btnSvg','btnIco'].forEach(i => {
+        document.getElementById(i).classList.remove('primary');
+      });
+      document.getElementById(id).classList.add('primary');
+    });
+  });
+
+  document.getElementById('btnExport').addEventListener('click', () => {
+    if (exportFormat === 'svg') {
+      const dataUrl = canvas.toDataURL('image/png');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">
+        <image href="${dataUrl}" width="${canvas.width}" height="${canvas.height}"/>
+      </svg>`;
+      download(new Blob([svg], {type:'image/svg+xml'}), 'image.svg');
+      return;
+    }
+
+    if (exportFormat === 'ico') {
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        blob.arrayBuffer().then(buf => {
+          const ico = buildIco(buf, canvas.width, canvas.height);
+          download(new Blob([ico], {type:'image/x-icon'}), 'image.ico');
+        });
+      }, 'image/png');
+      return;
+    }
+
+    if (exportFormat === 'jpeg') {
+      const tmp = document.createElement('canvas');
+      tmp.width = canvas.width;
+      tmp.height = canvas.height;
+      const tctx = tmp.getContext('2d');
+      tctx.fillStyle = bgColor || '#ffffff';
+      tctx.fillRect(0, 0, tmp.width, tmp.height);
+      tctx.drawImage(canvas, 0, 0);
+      tmp.toBlob((blob) => {
+        if (blob) download(blob, 'image.jpg');
+      }, 'image/jpeg', 0.92);
+      return;
+    }
+
+    canvas.toBlob((blob) => {
+      if (blob) download(blob, 'image.png');
+    }, 'image/png');
+  });
+
+  function download(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  function buildIco(pngBuf, w, h) {
+    const header = new Uint8Array(6);
+    const dv = new DataView(header.buffer);
+    dv.setUint16(0, 0, true);
+    dv.setUint16(2, 1, true);
+    dv.setUint16(4, 1, true);
+
+    const entry = new Uint8Array(16);
+    const edv = new DataView(entry.buffer);
+    edv.setUint8(0, w >= 256 ? 0 : w);
+    edv.setUint8(1, h >= 256 ? 0 : h);
+    edv.setUint8(2, 0);
+    edv.setUint8(3, 0);
+    edv.setUint16(4, 1, true);
+    edv.setUint16(6, 32, true);
+    edv.setUint32(8, pngBuf.byteLength, true);
+    edv.setUint32(12, 22, true);
+
+    return new Uint8Array([...header, ...entry, ...new Uint8Array(pngBuf)]);
+  }
+
+  window.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const it of items) {
+      if (it.type.startsWith('image/')) {
+        const file = it.getAsFile();
+        if (file) loadImageFile(file);
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+
+  updateInfo();
+})();
+</script>
+</body>
+</html>
