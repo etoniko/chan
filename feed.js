@@ -66,11 +66,13 @@
   function mediaUrl(username, id, file) {
     const value = String(file || '');
     if (value.charAt(0) === '/') return value.split('/').map((part) => encodeURIComponent(part)).join('/');
-    return '/media/' + encodeURIComponent(username) + '/' + encodeURIComponent(String(id)) + '/' +
-      value.split('/').map(encodeURIComponent).join('/');
+    return '/media/' + encodeURIComponent(value.split('/').pop());
   }
   function channelHref(username) {
     return '/' + encodeURIComponent(username) + '/';
+  }
+  function postHref(username, id) {
+    return '/' + encodeURIComponent(username) + '/' + encodeURIComponent(String(id)) + '/';
   }
   function frameUrl(src) {
     return String(src || '').replace(/\.mp4(?=$|[?#])/i, '.jpg');
@@ -237,7 +239,7 @@
       '<span>Подписаться</span></button>';
   }
   function card(username, post, channelOnly, title) {
-    const href = channelHref(username);
+    const href = postHref(username, post.id);
     const chHref = '/' + encodeURIComponent(username) + '/';
     const name = title || username;
     const text = post.html || esc(post.text || post.description || post.title || ('Пост ' + post.id));
@@ -558,17 +560,28 @@
   const more = document.getElementById('feed-more');
   const sentinel = document.getElementById('feed-sentinel');
   const RESERVED = { media: 1, css: 1, js: 1, icon: 1, icons: 1, photo: 1, privacy: 1, assets: 1 };
+  function pageParts() {
+    return location.pathname.split('/').filter(Boolean);
+  }
   function channelFromPage() {
     if (list.dataset.channel) return list.dataset.channel;
-    const parts = location.pathname.split('/').filter(Boolean);
+    const parts = pageParts();
     if (!parts.length || parts[0].toLowerCase() === 'index.html') return '';
     const name = parts[0].replace(/\.html$/i, '');
     if (!name || RESERVED[name.toLowerCase()]) return '';
     if (parts.length === 1) return name;
-    if (parts.length === 2 && (/^index\.html$/i.test(parts[1]) || /^\d+$/.test(parts[1]))) return name;
+    if (parts.length >= 2 && /^\d+$/.test(parts[1])) return name;
+    if (parts.length === 2 && /^index\.html$/i.test(parts[1])) return name;
+    return '';
+  }
+  function postFromPage() {
+    if (list.dataset.post && /^\d+$/.test(list.dataset.post)) return list.dataset.post;
+    const parts = pageParts();
+    if (parts.length >= 2 && /^\d+$/.test(parts[1])) return parts[1];
     return '';
   }
   const channel = channelFromPage();
+  const postId = postFromPage();
   if (channel) list.dataset.channel = channel;
   const PAGE = 12;
   let queue = [];
@@ -645,6 +658,42 @@
     const origin = location.origin;
     const count = (pack.posts || []).length;
     fillHooks(pack, count);
+    const one = postId && postsByKey.get(channel + '/' + postId);
+    if (one) {
+      const url = origin + postHref(channel, one.id);
+      const description = one.description || one.title || '';
+      const title = (one.title || name) + ' — ' + name;
+      document.title = title;
+      if (description) {
+        setMeta('name', 'description', description);
+        setMeta('property', 'og:description', description);
+        setMeta('name', 'twitter:description', description);
+      }
+      setMeta('property', 'og:title', one.title || name);
+      setMeta('property', 'og:url', url);
+      setMeta('property', 'og:type', 'article');
+      setMeta('name', 'twitter:title', one.title || name);
+      const photo = (one.media || []).find((item) => item.type === 'photo');
+      if (photo) {
+        const img = origin + mediaUrl(channel, one.id, photo.path);
+        setMeta('property', 'og:image', img);
+        setMeta('name', 'twitter:image', img);
+      }
+      setCanonical(url);
+      setLd({
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: one.title || name,
+        datePublished: one.date,
+        dateModified: one.date,
+        description: description,
+        articleBody: one.text || '',
+        url: url,
+        articleSection: name,
+        publisher: { '@type': 'Organization', name: 'CHAN.SU', url: origin + '/' }
+      });
+      return;
+    }
     const url = origin + channelHref(channel);
     const description = (pack.seo && pack.seo.description) || pack.about || authored.description || '';
     const title = (pack.seo && pack.seo.title) || name;
@@ -669,7 +718,7 @@
         '@type': 'ListItem',
         position: index + 1,
         name: item.title || ('Пост ' + item.id),
-        url: url
+        url: origin + postHref(channel, item.id)
       }))
     });
   }
@@ -683,6 +732,7 @@
       (pack.posts || []).forEach((post) => {
         postsByKey.set(username + '/' + post.id, post);
         const key = username + '/' + post.id;
+        if (postId && String(post.id) !== String(postId)) return;
         if (seen.has(key)) return;
         items.push({ date: post.date, html: card(username, post, Boolean(channel), title) });
       });
