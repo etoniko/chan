@@ -30,19 +30,32 @@
 <link rel="apple-touch-icon" sizes="180x180" href="https://chan.su/icons/icon-180x180.png">
 </head>
 <body>
-<header class="site-header">
-  <div class="coin"><a href="https://chan.su/" class="logo"><img src="/icons/ico.svg" alt="" width="20" height="20">CHAN.SU</a><a class="coin-live" id="coin-live" href="https://pay.cloudtips.ru/p/0bc615e3" target="_blank" rel="noopener">Сбор средств на рекламу</a></div>
-</header>
-<main class="home">
-  <section class="feed-list" id="feed-list" aria-label="Свежие публикации">
-  </section>
-  <div class="feed-more-wrap">
-    <button class="feed-more" id="feed-more" type="button" hidden>Показать ещё</button>
-    <p class="feed-status" id="feed-status" aria-live="polite"></p>
-    <div class="feed-sentinel" id="feed-sentinel" aria-hidden="true"></div>
-  </div>
-</main>
-<footer class="site-footer"><span>© CHAN Social Union</span><a href="/privacy/">Конфиденциальность</a></footer>
-<script src="/feed.js?v=10" defer></script>
+  <header class="site-header">
+    <div class="coin">
+      <a href="https://chan.su/" class="logo">
+        <img src="/icons/ico.svg" alt="" width="20" height="20">
+      </a>
+      <a class="coin-live" id="coin-live"
+         href="https://pay.cloudtips.ru/p/0bc615e3"
+         target="_blank" rel="noopener"></a>
+    </div>
+  </header>
+
+  <main class="home">
+    <section class="feed-list" id="feed-list" aria-label=""></section>
+
+    <div class="feed-more-wrap">
+      <button class="feed-more" id="feed-more" type="button" hidden></button>
+      <p class="feed-status" id="feed-status" aria-live="polite"></p>
+      <div class="feed-sentinel" id="feed-sentinel" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <span id="footer-copy"></span>
+    <a href="/privacy/" id="footer-privacy"></a>
+  </footer>
+
+  <script src="/feed.js?v=10" defer></script>
 </body>
 </html>
