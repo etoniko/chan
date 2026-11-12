@@ -1070,6 +1070,33 @@
           "path": "/media/rykc7ra0.jpg"
         }
       ]
+    },
+    {
+      "id": 78302,
+      "date": "2026-11-12T18:05:32.000Z",
+      "title": "Легенда",
+      "description": "Легенда",
+      "text": "Легенда",
+      "html": "Легенда",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/ndeee104.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/drz08f0t.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/qzetqi3r.jpg"
+        }
+      ],
+      "msgs": [
+        78302,
+        78303,
+        78304
+      ]
     }
   ]
 }
