@@ -1,7 +1,58 @@
 (function () {
+  // ===== ЕДИНЫЙ ИСТОЧНИК ТЕКСТОВ =====
+  const I18N = {
+    brand: 'CHAN.SU',
+    coinLive: 'Сбор средств на рекламу',
+    feedAria: 'Свежие публикации',
+    more: 'Показать ещё',
+    footerCopy: '© CHAN Social Union',
+    footerPrivacy: 'Конфиденциальность',
+    subscribe: 'Подписаться',
+    subscribed: 'Вы подписаны',
+    share: 'Поделиться',
+    copied: 'Ссылка скопирована',
+    expand: 'Показать всё',
+    justNow: 'сейчас',
+    minAgo: (m) => m + ' мин назад'
+  };
+
+  function setText(sel, text) {
+    const el = document.querySelector(sel);
+    if (el) el.textContent = text;
+  }
+  function setAttr(sel, attr, value) {
+    const el = document.querySelector(sel);
+    if (el) el.setAttribute(attr, value);
+  }
+
+  function applyStaticTexts() {
+    // header: бренд
+    const logo = document.querySelector('.logo');
+    if (logo && !logo.querySelector('.logo-text')) {
+      const s = document.createElement('span');
+      s.className = 'logo-text';
+      s.textContent = I18N.brand;
+      logo.appendChild(s);
+    }
+    setText('#coin-live', I18N.coinLive);
+
+    // feed
+    setAttr('#feed-list', 'aria-label', I18N.feedAria);
+    setText('#feed-more', I18N.more);
+
+    // footer
+    setText('#footer-copy', I18N.footerCopy);
+    setText('#footer-privacy', I18N.footerPrivacy);
+  }
+
+  applyStaticTexts();
+
+  // ===== SERVICE WORKER =====
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(function () {});
   }
+
+  // ===== ПОДПИСКИ =====
   const SUB_KEY = 'chan-subscribed';
   const postsByKey = new Map();
 
@@ -19,7 +70,7 @@
   function paintSubscribe(button, on) {
     button.setAttribute('aria-pressed', on ? 'true' : 'false');
     const label = button.querySelector('span');
-    if (label) label.textContent = on ? 'Вы подписаны' : 'Подписаться';
+    if (label) label.textContent = on ? I18N.subscribed : I18N.subscribe;
   }
   function bindActions(root) {
     const subs = readSubs();
@@ -57,12 +108,13 @@
         }
         try {
           await navigator.clipboard.writeText(url);
-          button.setAttribute('aria-label', 'Ссылка скопирована');
+          button.setAttribute('aria-label', I18N.copied);
         } catch (e) {}
       });
     });
   }
 
+  // ===== УТИЛИТЫ =====
   function mediaUrl(username, id, file) {
     const value = String(file || '');
     if (value.charAt(0) === '/') return value.split('/').map((part) => encodeURIComponent(part)).join('/');
@@ -134,6 +186,7 @@
     watchPlayback(video);
     pauseOtherVideos(video);
   }, true);
+
   function fillMedia(box, username, id, media) {
     if (!box || box.childElementCount || !media || !media.length) return;
     if (media.length > 1) box.classList.add('has-grid');
@@ -164,7 +217,7 @@
       }
       const link = document.createElement('a');
       link.href = src;
-      link.textContent = String(item.path || 'файл').split('/').pop();
+      link.textContent = String(item.path || '').split('/').pop();
       box.appendChild(link);
     });
   }
@@ -195,7 +248,7 @@
     more.className = 'feed-expand';
     more.type = 'button';
     const label = document.createElement('span');
-    label.textContent = 'Показать всё';
+    label.textContent = I18N.expand;
     more.appendChild(label);
     more.addEventListener('click', () => {
       text.classList.remove('is-collapsed');
@@ -216,8 +269,8 @@
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '';
     const mins = Math.floor((Date.now() - d.getTime()) / 60000);
-    if (mins >= 0 && mins < 1) return 'сейчас';
-    if (mins >= 1 && mins <= 60) return mins + ' мин назад';
+    if (mins >= 0 && mins < 1) return I18N.justNow;
+    if (mins >= 1 && mins <= 60) return I18N.minAgo(mins);
     return d.toLocaleString('ru-RU', {
       day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
       timeZone: 'Europe/Moscow'
@@ -230,19 +283,19 @@
     });
   }
   function shareHtml(url) {
-    return '<button class="feed-share" type="button" data-share-url="' + esc(url) + '" aria-label="Поделиться">' +
+    return '<button class="feed-share" type="button" data-share-url="' + esc(url) + '" aria-label="' + esc(I18N.share) + '">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8h16v-8"/><path d="M12 16V3"/><path d="M7 8l5-5 5 5"/></svg></button>';
   }
   function subscribeHtml(username) {
     return '<button class="feed-subscribe" type="button" data-subscribe-channel="' + esc(username) + '" aria-pressed="false">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>' +
-      '<span>Подписаться</span></button>';
+      '<span>' + esc(I18N.subscribe) + '</span></button>';
   }
   function card(username, post, channelOnly, title) {
     const href = postHref(username, post.id);
     const chHref = '/' + encodeURIComponent(username) + '/';
     const name = title || username;
-    const text = post.html || esc(post.text || post.description || post.title || ('Пост ' + post.id));
+    const text = post.html || esc(post.text || post.description || post.title || '');
     const date = post.date || '';
     const dateHtml = date ? '<time datetime="' + esc(date) + '">' + esc(when(date)) + '</time>' : '';
     const shareUrl = location.origin + href;
@@ -280,6 +333,7 @@
     window.scrollTo(0, lockedScrollY);
   }
 
+  // ===== LIGHTBOX =====
   function useTouchLightbox() {
     return window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
   }
@@ -517,11 +571,13 @@
     openLightbox(img);
   });
 
+  // ===== ИНИЦИАЛИЗАЦИЯ =====
   bindActions(document);
   paintTimes(document);
   setInterval(() => paintTimes(document), 30000);
   document.querySelectorAll('video').forEach(showFirstFrame);
 
+  // ===== СКРЫТИЕ ХЕДЕРА =====
   const bar = document.querySelector('.site-header');
   if (bar) {
     let lastY = window.scrollY || 0;
@@ -557,6 +613,7 @@
 
   if (!list) return;
 
+  // ===== ЛЕНТА =====
   const more = document.getElementById('feed-more');
   const sentinel = document.getElementById('feed-sentinel');
   const RESERVED = { media: 1, css: 1, js: 1, icon: 1, icons: 1, photo: 1, privacy: 1, assets: 1 };
