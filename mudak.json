@@ -1612,6 +1612,38 @@
           "path": "/media/9ehnmkuo.mp4"
         }
       ]
+    },
+    {
+      "id": 109330,
+      "date": "2026-11-16T18:29:56.000Z",
+      "title": "Собачники тут",
+      "description": "Собачники тут?",
+      "text": "Собачники тут?",
+      "html": "Собачники тут?",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/zaot5pg4.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/ncmaw327.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/tabtiiq8.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/d7325du0.jpg"
+        }
+      ],
+      "msgs": [
+        109330,
+        109331,
+        109332,
+        109333
+      ]
     }
   ]
 }
