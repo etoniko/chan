@@ -2331,6 +2331,28 @@
           "path": "/media/8c7b1t50.mp4"
         }
       ]
+    },
+    {
+      "id": 78409,
+      "date": "2026-11-16T18:25:38.000Z",
+      "title": "Пост 78409",
+      "description": "😏",
+      "text": "😏",
+      "html": "😏",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/j683osy5.jpg"
+        },
+        {
+          "type": "video",
+          "path": "/media/hm39jk3n.mp4"
+        }
+      ],
+      "msgs": [
+        78409,
+        78410
+      ]
     }
   ]
 }
