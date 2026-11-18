@@ -3115,6 +3115,20 @@
           "path": "/media/z5nt6hf0.mp4"
         }
       ]
+    },
+    {
+      "id": 78474,
+      "date": "2026-11-18T19:01:06.000Z",
+      "title": "Промт - t.mezumpromt",
+      "description": "Промт - t.me/zum_promt Бот для генерации (выбираем gpt картинки) - @zum4_bot",
+      "text": "Промт - t.me/zum_promt\n\nБот для генерации (выбираем gpt картинки) - @zum4_bot",
+      "html": "Промт - <a href=\"/\">t.me/zum_promt</a><br><br>Бот для генерации (выбираем gpt картинки) - <a href=\"/\">@zum4_bot</a>",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/9d84e7ny.jpg"
+        }
+      ]
     }
   ]
 }
