@@ -7,5 +7,20 @@
     "title": "Cafe дe Flore • Цитаты • Мемы",
     "description": "По рекламе: @evoanna @evo_milena\n\nКанал в реестре: https://clck.ru/3FCQbq"
   },
-  "posts": []
+  "posts": [
+    {
+      "id": 7634,
+      "date": "2026-11-21T13:35:07.000Z",
+      "title": "мы",
+      "description": "мы?",
+      "text": "мы?",
+      "html": "мы?",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/qa0klduo.jpg"
+        }
+      ]
+    }
+  ]
 }
