@@ -4561,6 +4561,20 @@
           "path": "/media/uh7vt6yx.mp4"
         }
       ]
+    },
+    {
+      "id": 78594,
+      "date": "2026-11-22T14:04:16.000Z",
+      "title": "Вот вот вот",
+      "description": "Вот вот вот",
+      "text": "Вот вот вот",
+      "html": "Вот вот вот",
+      "media": [
+        {
+          "type": "video",
+          "path": "/media/20dh8p32.mp4"
+        }
+      ]
     }
   ]
 }
