@@ -1,5 +1,13 @@
 (function () {
   // ===== ЕДИНЫЙ ИСТОЧНИК ТЕКСТОВ =====
+  // Номера блоков РСЯ. Пустая строка — блок не показывается и Яндекс не грузится.
+  // Кабинет: Реклама → Блоки → RTB. Формат номера: R-A-1234567-1
+  const ADS = {
+    postFullscreenPhone: '', // Полноэкранный, платформа «Мобильная». Только страница поста.
+    postFloorDesktop: '',    // Floor Ad, платформа «Десктопная». Только страница поста.
+    banner: ''               // Баннер. Главная и страница канала, одна карточка.
+  };
+
   const I18N = {
     brand: 'CHAN.SU',
     coinLive: 'Сбор средств на рекламу',
@@ -298,6 +306,102 @@
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>' +
       '<span>' + esc(I18N.subscribe) + '</span></button>';
   }
+  function adBlockId(key) {
+    const id = String((ADS && ADS[key]) || '').trim();
+    return /^R-A-\d+-\d+$/.test(id) ? id : '';
+  }
+  let adsReady = null;
+  function ensureYandex() {
+    if (adsReady) return adsReady;
+    adsReady = new Promise((resolve) => {
+      window.yaContextCb = window.yaContextCb || [];
+      const script = document.createElement('script');
+      script.src = 'https://yandex.ru/ads/system/context.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => resolve();
+      document.head.appendChild(script);
+    });
+    return adsReady;
+  }
+  function renderYandex(blockId, options) {
+    if (!blockId) return;
+    ensureYandex().then(() => {
+      window.yaContextCb.push(() => {
+        try {
+          if (!window.Ya || !Ya.Context || !Ya.Context.AdvManager) return;
+          const renderTo = options && options.renderTo;
+          Ya.Context.AdvManager.render(Object.assign({
+            blockId: blockId,
+            onError: function () {
+              if (!renderTo) return;
+              const slot = document.getElementById(renderTo);
+              const card = slot && slot.closest('[data-ad]');
+              if (card) card.hidden = true;
+            }
+          }, options || {}));
+        } catch (err) {}
+      });
+    });
+  }
+  function adCard(renderId) {
+    return '<article class="feed-item" data-ad="1">' +
+      '<header class="feed-post-head"><div class="feed-author"><span class="feed-channel">Реклама</span></div></header>' +
+      '<div id="' + renderId + '"></div></article>';
+  }
+  function mountPostAds() {
+    if (!postId) return;
+    const phoneId = adBlockId('postFullscreenPhone');
+    const floorId = adBlockId('postFloorDesktop');
+    if (!phoneId && !floorId) return;
+    ensureYandex().then(() => {
+      window.yaContextCb.push(() => {
+        try {
+          if (!window.Ya || !Ya.Context || !Ya.Context.AdvManager) return;
+          const platform = typeof Ya.Context.AdvManager.getPlatform === 'function'
+            ? Ya.Context.AdvManager.getPlatform()
+            : 'desktop';
+          if (platform === 'desktop') {
+            if (!floorId) return;
+            Ya.Context.AdvManager.render({ blockId: floorId, type: 'floorAd', platform: 'desktop' });
+            return;
+          }
+          if (!phoneId) return;
+          Ya.Context.AdvManager.render({ blockId: phoneId, type: 'fullscreen', platform: 'touch' });
+        } catch (err) {}
+      });
+    });
+  }
+  let bannerDone = false;
+  function mountBanner() {
+    if (bannerDone || postId) return;
+    const id = adBlockId('banner');
+    if (!id || !list || document.getElementById('chan-ad-banner')) return;
+    const posts = list.querySelectorAll('.feed-item:not([data-ad])');
+    if (posts.length >= 3) {
+      posts[2].insertAdjacentHTML('afterend', adCard('chan-ad-banner'));
+      bannerDone = true;
+      renderYandex(id, { renderTo: 'chan-ad-banner' });
+      return;
+    }
+    if (queue.length) return;
+    let slot = document.getElementById('chan-ad-slot');
+    const box = document.getElementById('yandex-rtb-chan');
+    if (!slot) {
+      list.insertAdjacentHTML('afterend', adCard('yandex-rtb-chan'));
+      slot = document.getElementById('yandex-rtb-chan');
+      if (slot) slot = slot.closest('[data-ad]');
+    }
+    if (box) box.id = 'chan-ad-banner';
+    else {
+      const fresh = document.getElementById('yandex-rtb-chan');
+      if (fresh) fresh.id = 'chan-ad-banner';
+    }
+    if (slot) slot.hidden = false;
+    bannerDone = true;
+    renderYandex(id, { renderTo: 'chan-ad-banner' });
+  }
+
   function card(username, post, channelOnly, title) {
     const href = postHref(username, post.id);
     const chHref = '/' + encodeURIComponent(username) + '/';
@@ -663,7 +767,8 @@
     }
     const html = slice.map((item) => item.html).join('');
     list.insertAdjacentHTML('beforeend', html);
-    const fresh = Array.from(list.querySelectorAll('.feed-item')).slice(-slice.length);
+    mountBanner();
+    const fresh = Array.from(list.querySelectorAll('.feed-item:not([data-ad])')).slice(-slice.length);
     fresh.forEach(hydrate);
     bindActions(list);
     paintTimes(list);
@@ -807,6 +912,8 @@
     if (more) more.hidden = queue.length === 0;
     renderNext();
     applySeo();
+    mountBanner();
+    mountPostAds();
   }
 
   function loadJson(url) {

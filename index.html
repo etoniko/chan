@@ -73,35 +73,6 @@
     <a href="/privacy/" id="footer-privacy"></a>
   </footer>
 
-  <script src="/feed.js?v=12" defer></script>
-  <script>
-    // ID блока РСЯ. Кабинет Яндекса: Реклама → Блоки → RTB → тип «Баннер».
-    // Не выбирайте Floor Ad и не полноэкранный блок. Пример: R-A-20468347-3
-    window.CHAN_AD_BLOCK_ID = "";
-  </script>
-  <script>
-    (function () {
-      var id = String(window.CHAN_AD_BLOCK_ID || "").trim();
-      var slot = document.getElementById("chan-ad-slot");
-      if (!slot || !/^R-A-\d+-\d+$/.test(id)) return;
-      slot.hidden = false;
-      window.yaContextCb = window.yaContextCb || [];
-      var loader = document.createElement("script");
-      loader.src = "https://yandex.ru/ads/system/context.js";
-      loader.async = true;
-      document.head.appendChild(loader);
-      window.yaContextCb.push(function () {
-        try {
-          if (!window.Ya || !Ya.Context || !Ya.Context.AdvManager) return;
-          Ya.Context.AdvManager.render({
-            blockId: id,
-            renderTo: "yandex-rtb-chan"
-          });
-        } catch (err) {
-          slot.hidden = true;
-        }
-      });
-    })();
-  </script>
+  <script src="/feed.js?v=13" defer></script>
 </body>
 </html>
