@@ -923,16 +923,34 @@
     if (!channel && total != null) fillHooks(null, total);
     if (list) buildQueue();
   }
-  function loadShard(username) {
+  function postsPack(username, files) {
+    const posts = [];
+    const seen = new Set();
+    let title = username;
+    (files || []).forEach((file) => {
+      if (!file) return;
+      title = file.title || title;
+      (file.posts || []).forEach((post) => {
+        const id = Number(post && post.id);
+        if (!post || seen.has(id)) return;
+        seen.add(id);
+        posts.push(post);
+      });
+    });
+    return posts.length ? { username: username, title: title, posts: posts } : null;
+  }
+  function loadFresh(username) {
     return loadJson('/' + encodeURIComponent(username) + '/tip.json').then((tip) => {
-      if (!tip || tip.shard == null) return null;
-      return loadJson('/' + encodeURIComponent(username) + '/shard/' + tip.shard + '.json');
+      if (!tip) return null;
+      const ids = Array.isArray(tip.ids) ? tip.ids : (tip.id != null ? [tip.id] : []);
+      const jobs = ids.slice(-40).map((id) => loadJson('/' + encodeURIComponent(username) + '/' + id + '.json'));
+      if (tip.shard != null) jobs.push(loadJson('/' + encodeURIComponent(username) + '/shard/' + tip.shard + '.json'));
+      return Promise.all(jobs).then((files) => postsPack(username, files));
     });
   }
   function loadFeed() {
     if (channel && postId) {
-      const shard = Math.floor(Number(postId) / 100);
-      loadJson('/' + encodeURIComponent(channel) + '/shard/' + shard + '.json').then((pack) => {
+      loadJson('/' + encodeURIComponent(channel) + '/' + encodeURIComponent(postId) + '.json').then((pack) => {
         const hit = pack && (pack.posts || []).some((post) => String(post.id) === String(postId));
         if (hit) {
           showPacks([pack]);
@@ -953,14 +971,14 @@
     namesJob.then((names) => {
       const packsNow = [];
       names.forEach((username) => {
-        loadShard(username).then((shard) => {
-          if (shard && Array.isArray(shard.posts) && shard.posts.length) {
-            packsNow.push(shard);
+        loadFresh(username).then((fresh) => {
+          if (fresh && Array.isArray(fresh.posts) && fresh.posts.length) {
+            packsNow.push(fresh);
             showPacks(packsNow.slice());
           }
           return loadJson('/' + encodeURIComponent(username) + '.json').then((archive) => {
             if (!archive || !Array.isArray(archive.posts)) return;
-            const merged = mergePack(archive, shard);
+            const merged = mergePack(archive, fresh);
             const idx = packsNow.findIndex((pack) => pack.username === username);
             if (idx >= 0) packsNow[idx] = merged;
             else packsNow.push(merged);
