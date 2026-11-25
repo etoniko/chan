@@ -862,9 +862,7 @@
 
   const KEEP = 5;
   let items = [];
-  let start = 0;
   let end = 0;
-  let padEl = null;
   let syncing = false;
   let archiveState = 'idle';
   let moreState = 'idle';
@@ -878,27 +876,27 @@
     items.forEach((item, index) => keyIndex.set(item.key, index));
   }
   function addEntries(entries) {
-    const anchorKey = end && items[start] ? items[start].key : '';
+    const headKey = end && items[0] ? items[0].key : '';
     const map = new Map(items.map((item) => [item.key, item]));
     entries.forEach((item) => {
       if (item && item.key) map.set(item.key, item);
     });
     items = Array.from(map.values()).sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
     reindex();
-    if (!anchorKey || !keyIndex.has(anchorKey)) return;
-    const at = keyIndex.get(anchorKey);
-    const shift = at - start;
-    if (!shift) return;
-    if (shift > 0 && (window.scrollY || 0) < 48) {
-      ensurePad();
-      padEl.insertAdjacentHTML('afterend', htmlFor(start, at));
-      activate(start, at);
+    if (!headKey || !keyIndex.has(headKey)) return;
+    const shift = keyIndex.get(headKey);
+    if (shift > 0) {
+      const y = window.scrollY || 0;
+      const anchor = list.firstElementChild;
+      const before = anchor ? anchor.getBoundingClientRect().top : 0;
+      list.insertAdjacentHTML('afterbegin', htmlFor(0, shift));
+      activate(0, shift);
       end += shift;
-      start = at;
-      return;
+      if (y > 48 && anchor) {
+        const grew = anchor.getBoundingClientRect().top - before;
+        if (grew) window.scrollBy(0, grew);
+      }
     }
-    start = at;
-    end += shift;
   }
   function entriesFromPacks(source) {
     const entries = [];
@@ -917,24 +915,6 @@
       });
     });
     return entries;
-  }
-  function clearPosts() {
-    if (padEl) padEl.style.height = '0px';
-    Array.from(list.children).forEach((el) => {
-      if (el !== padEl) el.remove();
-    });
-    start = 0;
-    end = 0;
-  }
-  function ensurePad() {
-    list.style.overflowAnchor = 'none';
-    document.documentElement.style.overflowAnchor = 'none';
-    if (padEl && padEl.isConnected) return;
-    padEl = document.createElement('div');
-    padEl.className = 'feed-pad';
-    padEl.setAttribute('aria-hidden', 'true');
-    padEl.style.overflowAnchor = 'none';
-    list.insertBefore(padEl, list.firstChild);
   }
   function postNodes() {
     return Array.from(list.querySelectorAll('.feed-item:not([data-ad])'));
@@ -966,23 +946,6 @@
     list.insertAdjacentHTML('beforeend', htmlFor(from, to));
     activate(from, to);
   }
-  function hold(anchor, run) {
-    const before = anchor ? anchor.getBoundingClientRect().top : 0;
-    run();
-    if (!anchor || !padEl) return;
-    const delta = before - anchor.getBoundingClientRect().top;
-    if (!delta) return;
-    padEl.style.height = Math.max(0, padEl.offsetHeight + delta) + 'px';
-  }
-  function trimBottom(newEnd) {
-    postNodes().forEach((el) => {
-      const idx = keyIndex.get(el.dataset.postKey);
-      if (idx == null || idx < newEnd) return;
-      const ad = el.nextElementSibling;
-      if (ad && ad.getAttribute('data-ad') === '1') ad.remove();
-      el.remove();
-    });
-  }
   function paintPost() {
     list.innerHTML = items.map((item) => item.html).join('');
     list.querySelectorAll('.feed-item').forEach(hydrate);
@@ -999,55 +962,16 @@
     if (syncing || postId || !list) return;
     syncing = true;
     try {
-      ensurePad();
       if (!items.length) return;
+      const view = window.innerHeight || 800;
       if (!end) {
-        const guess = Math.ceil((window.innerHeight || 800) / 320) + KEEP;
-        const to = Math.min(items.length, Math.max(guess, KEEP + 1));
-        appendRange(0, to);
-        start = 0;
-        end = to;
+        const guess = Math.ceil(view / 320) + KEEP;
+        end = Math.min(items.length, Math.max(guess, KEEP + 1));
+        appendRange(0, end);
         applySeo();
-        if (end >= items.length - KEEP) pullMore();
-        return;
       }
       const nodes = postNodes();
-      if (!nodes.length) return;
-      const view = window.innerHeight || 800;
-      let above = 0;
-      let below = 0;
-      nodes.forEach((el) => {
-        const box = el.getBoundingClientRect();
-        if (box.bottom < 0) above += 1;
-        else if (box.top > view) below += 1;
-      });
-      const firstTop = nodes[0].getBoundingClientRect().top;
-      if (start > 0 && firstTop > 24) {
-        const back = Math.max(KEEP, Math.ceil(firstTop / 480));
-        const newStart = Math.max(0, start - back);
-        const anchor = nodes[0];
-        hold(anchor, () => {
-          padEl.insertAdjacentHTML('afterend', htmlFor(newStart, start));
-          activate(newStart, start);
-        });
-        start = newStart;
-      } else if (above > KEEP + 2) {
-        const anchor = nodes[above - KEEP];
-        const newStart = anchor ? keyIndex.get(anchor.dataset.postKey) : start;
-        if (anchor && newStart > start) {
-          hold(anchor, () => {
-            let node = padEl.nextElementSibling;
-            while (node && node !== anchor) {
-              const next = node.nextElementSibling;
-              node.remove();
-              node = next;
-            }
-          });
-          start = newStart;
-        }
-      }
-      const fresh = postNodes();
-      const tailEl = fresh[fresh.length - 1];
+      const tailEl = nodes[nodes.length - 1];
       if (tailEl && end < items.length) {
         const tailAd = tailEl.nextElementSibling;
         const tail = (tailAd && tailAd.getAttribute('data-ad') === '1' ? tailAd : tailEl).getBoundingClientRect().bottom;
@@ -1055,13 +979,6 @@
           const to = Math.min(items.length, end + KEEP);
           appendRange(end, to);
           end = to;
-        }
-      } else if (below > KEEP + 8) {
-        const keepBelow = nodes[nodes.length - 1 - (below - KEEP)];
-        const newEnd = keepBelow ? (keyIndex.get(keepBelow.dataset.postKey) || 0) + 1 : end;
-        if (newEnd < end) {
-          trimBottom(newEnd);
-          end = newEnd;
         }
       }
       if (end >= items.length - KEEP) pullMore();
