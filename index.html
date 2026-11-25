@@ -41,19 +41,6 @@
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/114215836" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
-    <!-- Yandex.RTB -->
-<script>window.yaContextCb=window.yaContextCb||[]</script>
-<script src="https://yandex.ru/ads/system/context.js" async></script>
-<!-- Yandex.RTB R-A-20468347-2 -->
-<script>
-window.yaContextCb.push(() => {
-    Ya.Context.AdvManager.render({
-        "blockId": "R-A-20468347-2",
-        "type": "floorAd",
-        "platform": "touch"
-    })
-})
-</script>
 </head>
 <body>
   <header class="site-header">
@@ -75,6 +62,10 @@ window.yaContextCb.push(() => {
       <p class="feed-status" id="feed-status" aria-live="polite"></p>
       <div class="feed-sentinel" id="feed-sentinel" aria-hidden="true"></div>
     </div>
+    <article class="feed-item" id="chan-ad-slot" hidden style="margin-top:16px">
+      <header class="feed-post-head"><div class="feed-author"><span class="feed-channel">Реклама</span></div></header>
+      <div id="yandex-rtb-chan"></div>
+    </article>
   </main>
 
   <footer class="site-footer">
@@ -83,5 +74,34 @@ window.yaContextCb.push(() => {
   </footer>
 
   <script src="/feed.js?v=12" defer></script>
+  <script>
+    // ID блока РСЯ. Кабинет Яндекса: Реклама → Блоки → RTB → тип «Баннер».
+    // Не выбирайте Floor Ad и не полноэкранный блок. Пример: R-A-20468347-3
+    window.CHAN_AD_BLOCK_ID = "";
+  </script>
+  <script>
+    (function () {
+      var id = String(window.CHAN_AD_BLOCK_ID || "").trim();
+      var slot = document.getElementById("chan-ad-slot");
+      if (!slot || !/^R-A-\d+-\d+$/.test(id)) return;
+      slot.hidden = false;
+      window.yaContextCb = window.yaContextCb || [];
+      var loader = document.createElement("script");
+      loader.src = "https://yandex.ru/ads/system/context.js";
+      loader.async = true;
+      document.head.appendChild(loader);
+      window.yaContextCb.push(function () {
+        try {
+          if (!window.Ya || !Ya.Context || !Ya.Context.AdvManager) return;
+          Ya.Context.AdvManager.render({
+            blockId: id,
+            renderTo: "yandex-rtb-chan"
+          });
+        } catch (err) {
+          slot.hidden = true;
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
