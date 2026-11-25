@@ -905,20 +905,69 @@
   function loadJson(url) {
     return fetch(url, { cache: 'no-cache' }).then((res) => (res.ok ? res.json() : null));
   }
+  function mergePack(archive, extra) {
+    if (!extra || !Array.isArray(extra.posts)) return archive;
+    if (!archive) return extra;
+    const posts = [];
+    const seen = new Set();
+    extra.posts.concat(archive.posts || []).forEach((post) => {
+      const id = Number(post && post.id);
+      if (!post || seen.has(id)) return;
+      seen.add(id);
+      posts.push(post);
+    });
+    return Object.assign({}, archive, { posts: posts });
+  }
+  function showPacks(loaded, total) {
+    packs = loaded.filter((pack) => pack && Array.isArray(pack.posts));
+    if (!channel && total != null) fillHooks(null, total);
+    if (list) buildQueue();
+  }
+  function loadShard(username) {
+    return loadJson('/' + encodeURIComponent(username) + '/tip.json').then((tip) => {
+      if (!tip || tip.shard == null) return null;
+      return loadJson('/' + encodeURIComponent(username) + '/shard/' + tip.shard + '.json');
+    });
+  }
   function loadFeed() {
-    const job = channel
-      ? loadJson('/' + encodeURIComponent(channel) + '.json').then((pack) => (pack && pack.posts ? [pack] : []))
+    if (channel && postId) {
+      const shard = Math.floor(Number(postId) / 100);
+      loadJson('/' + encodeURIComponent(channel) + '/shard/' + shard + '.json').then((pack) => {
+        const hit = pack && (pack.posts || []).some((post) => String(post.id) === String(postId));
+        if (hit) {
+          showPacks([pack]);
+          return null;
+        }
+        return loadJson('/' + encodeURIComponent(channel) + '.json').then((full) => {
+          showPacks(full && full.posts ? [full] : []);
+        });
+      }).catch(() => {});
+      return;
+    }
+    const namesJob = channel
+      ? Promise.resolve([channel])
       : loadJson('/channels.json').then((manifest) => {
           const entries = manifest && Array.isArray(manifest.channels) ? manifest.channels : [];
-          return Promise.all(entries.map((item) => {
-            const name = typeof item === 'string' ? item : item && item.username;
-            return name ? loadJson('/' + encodeURIComponent(name) + '.json') : null;
-          })).then((loaded) => loaded.filter((pack) => pack && Array.isArray(pack.posts)));
+          return entries.map((item) => (typeof item === 'string' ? item : item && item.username)).filter(Boolean);
         });
-    job.then((loaded) => {
-      packs = loaded;
-      if (!channel) fillHooks(null, packs.reduce((sum, pack) => sum + pack.posts.length, 0));
-      buildQueue();
+    namesJob.then((names) => {
+      const packsNow = [];
+      names.forEach((username) => {
+        loadShard(username).then((shard) => {
+          if (shard && Array.isArray(shard.posts) && shard.posts.length) {
+            packsNow.push(shard);
+            showPacks(packsNow.slice());
+          }
+          return loadJson('/' + encodeURIComponent(username) + '.json').then((archive) => {
+            if (!archive || !Array.isArray(archive.posts)) return;
+            const merged = mergePack(archive, shard);
+            const idx = packsNow.findIndex((pack) => pack.username === username);
+            if (idx >= 0) packsNow[idx] = merged;
+            else packsNow.push(merged);
+            showPacks(packsNow.slice(), packsNow.reduce((sum, pack) => sum + pack.posts.length, 0));
+          });
+        }).catch(() => {});
+      });
     }).catch(() => {});
   }
 
