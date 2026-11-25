@@ -3951,6 +3951,20 @@
           "path": "/media/p5fcb8aw.mp4"
         }
       ]
+    },
+    {
+      "id": 44703,
+      "date": "2026-11-25T15:34:14.000Z",
+      "title": "Lamborghini Huracn встретилась с московской зимой.",
+      "description": "❄️ Lamborghini Huracán встретилась с московской зимой. Видео: MSK1",
+      "text": "❄️ Lamborghini Huracán встретилась с московской зимой.\n\nВидео: MSK1",
+      "html": "❄️ Lamborghini Huracán встретилась с московской зимой.<br><br><i>Видео: MSK1</i>",
+      "media": [
+        {
+          "type": "video",
+          "path": "/media/11hsilcv.mp4"
+        }
+      ]
     }
   ]
 }
