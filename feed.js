@@ -27,14 +27,21 @@
 
   function applyStaticTexts() {
     // header: бренд
-    const logo = document.querySelector('.logo');
-    if (logo && !logo.querySelector('.logo-text')) {
-      const s = document.createElement('span');
-      s.className = 'logo-text';
-      s.textContent = I18N.brand;
-      logo.appendChild(s);
-    }
-    setText('#coin-live', I18N.coinLive);
+    document.querySelectorAll('.logo').forEach((logo) => {
+      let brand = logo.querySelector('.logo-text');
+      if (!brand) {
+        brand = document.createElement('span');
+        brand.className = 'logo-text';
+        logo.appendChild(brand);
+      }
+      Array.from(logo.childNodes).forEach((node) => {
+        if (node.nodeType === 3) node.parentNode.removeChild(node);
+      });
+      brand.textContent = I18N.brand;
+    });
+    document.querySelectorAll('#coin-live, .coin-live').forEach((node) => {
+      node.textContent = I18N.coinLive;
+    });
 
     // feed
     setAttr('#feed-list', 'aria-label', I18N.feedAria);
