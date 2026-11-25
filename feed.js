@@ -746,19 +746,9 @@
   };
 
   function renderNext() {
-    const slice = queue.splice(0, PAGE);
-    if (!slice.length) {
-      if (more) more.hidden = true;
-      return;
-    }
-    const html = slice.map((item) => item.html).join('');
-    list.insertAdjacentHTML('beforeend', html);
-    mountBanner();
-    const fresh = Array.from(list.querySelectorAll('.feed-item:not([data-ad])')).slice(-slice.length);
-    fresh.forEach(hydrate);
-    bindActions(list);
-    paintTimes(list);
-    if (more) more.hidden = queue.length === 0;
+    shown += 5;
+    if (shown > items.length) loadArchive();
+    paintFeed();
   }
 
   function setMeta(attr, key, value) {
@@ -878,27 +868,68 @@
     });
   }
 
-  function buildQueue() {
-    const seen = new Set(Array.from(list.querySelectorAll('[data-post-key]')).map((el) => el.dataset.postKey));
-    const items = [];
-    packs.forEach((pack) => {
+  let items = [];
+  let shown = 0;
+  let shownKeys = '';
+  let archiveState = 'idle';
+  let feedNames = [];
+  const tipIds = new Map();
+  const fetchedIds = new Set();
+
+  function screenTarget() {
+    const posts = list ? list.querySelectorAll('.feed-item:not([data-ad])') : [];
+    if (!posts.length) return 8;
+    const bottom = window.innerHeight || 800;
+    let visible = 0;
+    posts.forEach((el) => {
+      const box = el.getBoundingClientRect();
+      if (box.bottom > 0 && box.top < bottom) visible += 1;
+    });
+    if (!visible) visible = Math.max(2, Math.ceil((window.innerHeight || 800) / 460));
+    return visible + 5;
+  }
+  function addEntries(entries) {
+    const map = new Map(items.map((item) => [item.key, item]));
+    entries.forEach((item) => {
+      if (item && item.key) map.set(item.key, item);
+    });
+    items = Array.from(map.values()).sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
+  }
+  function entriesFromPacks(source) {
+    const entries = [];
+    (source || []).forEach((pack) => {
+      if (!pack) return;
       const username = pack.username;
       const title = pack.title || username;
       (pack.posts || []).forEach((post) => {
         postsByKey.set(username + '/' + post.id, post);
-        const key = username + '/' + post.id;
         if (postId && String(post.id) !== String(postId)) return;
-        if (seen.has(key)) return;
-        items.push({ date: post.date, html: card(username, post, Boolean(channel), title) });
+        entries.push({
+          key: username + '/' + post.id,
+          date: post.date,
+          html: card(username, post, Boolean(channel), title)
+        });
       });
     });
-    items.sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
-    queue = items;
-    list.querySelectorAll('.feed-item').forEach(hydrate);
-    if (more) more.hidden = queue.length === 0;
-    renderNext();
-    applySeo();
+    return entries;
+  }
+  function paintFeed() {
+    if (!list) return;
+    const need = Math.max(shown, screenTarget());
+    const slice = items.slice(0, need);
+    shown = slice.length;
+    const keys = slice.map((item) => item.key).join('|');
+    const noMore = shown >= items.length && archiveState === 'done';
+    if (more) more.hidden = noMore || !slice.length;
+    if (keys === shownKeys) return;
+    shownKeys = keys;
+    adSerial = 0;
+    list.innerHTML = slice.map((item) => item.html).join('');
     mountBanner();
+    list.querySelectorAll('.feed-item:not([data-ad])').forEach(hydrate);
+    bindActions(list);
+    paintTimes(list);
+    applySeo();
     mountPostAds();
   }
 
@@ -918,11 +949,6 @@
     });
     return Object.assign({}, archive, { posts: posts });
   }
-  function showPacks(loaded, total) {
-    packs = loaded.filter((pack) => pack && Array.isArray(pack.posts));
-    if (!channel && total != null) fillHooks(null, total);
-    if (list) buildQueue();
-  }
   function postsPack(username, files) {
     const posts = [];
     const seen = new Set();
@@ -939,25 +965,56 @@
     });
     return posts.length ? { username: username, title: title, posts: posts } : null;
   }
-  function loadFresh(username) {
-    return loadJson('/' + encodeURIComponent(username) + '/tip.json').then((tip) => {
-      if (!tip) return null;
-      const ids = Array.isArray(tip.ids) ? tip.ids : (tip.id != null ? [tip.id] : []);
-      const jobs = ids.slice(-40).map((id) => loadJson('/' + encodeURIComponent(username) + '/' + id + '.json'));
-      if (tip.shard != null) jobs.push(loadJson('/' + encodeURIComponent(username) + '/shard/' + tip.shard + '.json'));
-      return Promise.all(jobs).then((files) => postsPack(username, files));
-    });
+  function takeIds(username, count) {
+    const ids = tipIds.get(username) || [];
+    const picked = [];
+    for (let i = ids.length - 1; i >= 0 && picked.length < count; i -= 1) {
+      const key = username + '/' + ids[i];
+      if (fetchedIds.has(key)) continue;
+      fetchedIds.add(key);
+      picked.push(ids[i]);
+    }
+    return picked;
+  }
+  function loadIds(username, ids) {
+    if (!ids.length) return Promise.resolve(null);
+    return Promise.all(ids.map((id) => loadJson('/' + encodeURIComponent(username) + '/' + id + '.json')))
+      .then((files) => postsPack(username, files));
+  }
+  function loadArchive() {
+    if (archiveState !== 'idle' || !feedNames.length) return;
+    archiveState = 'loading';
+    if (more) more.hidden = false;
+    Promise.all(feedNames.map((username) => loadJson('/' + encodeURIComponent(username) + '.json')))
+      .then((archives) => {
+        const loaded = archives.filter((pack) => pack && Array.isArray(pack.posts));
+        packs = loaded;
+        if (!channel) fillHooks(null, loaded.reduce((sum, pack) => sum + pack.posts.length, 0));
+        addEntries(entriesFromPacks(loaded));
+        archiveState = 'done';
+        paintFeed();
+      })
+      .catch(() => { archiveState = 'idle'; });
   }
   function loadFeed() {
     if (channel && postId) {
+      feedNames = [channel];
       loadJson('/' + encodeURIComponent(channel) + '/' + encodeURIComponent(postId) + '.json').then((pack) => {
         const hit = pack && (pack.posts || []).some((post) => String(post.id) === String(postId));
         if (hit) {
-          showPacks([pack]);
+          packs = [pack];
+          addEntries(entriesFromPacks([pack]));
+          shown = 1;
+          paintFeed();
           return null;
         }
         return loadJson('/' + encodeURIComponent(channel) + '.json').then((full) => {
-          showPacks(full && full.posts ? [full] : []);
+          if (!full || !full.posts) return;
+          packs = [full];
+          addEntries(entriesFromPacks([full]));
+          shown = 1;
+          archiveState = 'done';
+          paintFeed();
         });
       }).catch(() => {});
       return;
@@ -969,23 +1026,15 @@
           return entries.map((item) => (typeof item === 'string' ? item : item && item.username)).filter(Boolean);
         });
     namesJob.then((names) => {
-      const packsNow = [];
-      names.forEach((username) => {
-        loadFresh(username).then((fresh) => {
-          if (fresh && Array.isArray(fresh.posts) && fresh.posts.length) {
-            packsNow.push(fresh);
-            showPacks(packsNow.slice());
-          }
-          return loadJson('/' + encodeURIComponent(username) + '.json').then((archive) => {
-            if (!archive || !Array.isArray(archive.posts)) return;
-            const merged = mergePack(archive, fresh);
-            const idx = packsNow.findIndex((pack) => pack.username === username);
-            if (idx >= 0) packsNow[idx] = merged;
-            else packsNow.push(merged);
-            showPacks(packsNow.slice(), packsNow.reduce((sum, pack) => sum + pack.posts.length, 0));
-          });
-        }).catch(() => {});
-      });
+      feedNames = names;
+      return Promise.all(names.map((username) => loadJson('/' + encodeURIComponent(username) + '/tip.json').then((tip) => {
+        const ids = tip && Array.isArray(tip.ids) ? tip.ids : (tip && tip.id != null ? [tip.id] : []);
+        tipIds.set(username, ids.map(Number).filter((id) => Number.isFinite(id)));
+        return loadIds(username, takeIds(username, channel ? 8 : 3));
+      })));
+    }).then((fresh) => {
+      addEntries(entriesFromPacks(fresh));
+      paintFeed();
     }).catch(() => {});
   }
 
