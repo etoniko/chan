@@ -878,23 +878,27 @@
     items.forEach((item, index) => keyIndex.set(item.key, index));
   }
   function addEntries(entries) {
+    const anchorKey = end && items[start] ? items[start].key : '';
     const map = new Map(items.map((item) => [item.key, item]));
     entries.forEach((item) => {
       if (item && item.key) map.set(item.key, item);
     });
-    const anchorKey = items[start] && items[start].key;
     items = Array.from(map.values()).sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
     reindex();
-    if ((window.scrollY || 0) < 80) {
-      clearPosts();
+    if (!anchorKey || !keyIndex.has(anchorKey)) return;
+    const at = keyIndex.get(anchorKey);
+    const shift = at - start;
+    if (!shift) return;
+    if (shift > 0 && (window.scrollY || 0) < 48) {
+      ensurePad();
+      padEl.insertAdjacentHTML('afterend', htmlFor(start, at));
+      activate(start, at);
+      end += shift;
+      start = at;
       return;
     }
-    if (anchorKey && keyIndex.has(anchorKey)) {
-      const at = keyIndex.get(anchorKey);
-      const shift = at - start;
-      start += shift;
-      end += shift;
-    }
+    start = at;
+    end += shift;
   }
   function entriesFromPacks(source) {
     const entries = [];
@@ -923,10 +927,13 @@
     end = 0;
   }
   function ensurePad() {
+    list.style.overflowAnchor = 'none';
+    document.documentElement.style.overflowAnchor = 'none';
     if (padEl && padEl.isConnected) return;
     padEl = document.createElement('div');
     padEl.className = 'feed-pad';
     padEl.setAttribute('aria-hidden', 'true');
+    padEl.style.overflowAnchor = 'none';
     list.insertBefore(padEl, list.firstChild);
   }
   function postNodes() {
@@ -959,35 +966,13 @@
     list.insertAdjacentHTML('beforeend', htmlFor(from, to));
     activate(from, to);
   }
-  function prependRange(from, to) {
-    if (to <= from) return;
-    const anchor = padEl.nextElementSibling;
+  function hold(anchor, run) {
     const before = anchor ? anchor.getBoundingClientRect().top : 0;
-    padEl.insertAdjacentHTML('afterend', htmlFor(from, to));
-    const after = anchor ? anchor.getBoundingClientRect().top : 0;
-    const grew = after - before;
-    const next = padEl.offsetHeight - grew;
-    if (next < 0) {
-      padEl.style.height = '0px';
-      window.scrollBy(0, -next);
-    } else {
-      padEl.style.height = next + 'px';
-    }
-    activate(from, to);
-  }
-  function trimTop(newStart) {
-    const nodes = postNodes();
-    const anchor = nodes.find((el) => (keyIndex.get(el.dataset.postKey) || 0) >= newStart);
-    if (!anchor) return;
-    const before = anchor.getBoundingClientRect().top;
-    let node = padEl.nextElementSibling;
-    while (node && node !== anchor) {
-      const next = node.nextElementSibling;
-      node.remove();
-      node = next;
-    }
+    run();
+    if (!anchor || !padEl) return;
     const delta = before - anchor.getBoundingClientRect().top;
-    if (delta > 0) padEl.style.height = (padEl.offsetHeight + delta) + 'px';
+    if (!delta) return;
+    padEl.style.height = Math.max(0, padEl.offsetHeight + delta) + 'px';
   }
   function trimBottom(newEnd) {
     postNodes().forEach((el) => {
@@ -1015,60 +1000,71 @@
     syncing = true;
     try {
       ensurePad();
-      let guard = 0;
-      while (guard < 20) {
-        guard += 1;
-        if (!items.length) break;
-        if (!end) {
-          const guess = Math.ceil((window.innerHeight || 800) / 280) + KEEP;
-          const to = Math.min(items.length, Math.max(guess, KEEP + 1));
-          appendRange(0, to);
-          start = 0;
-          end = to;
-          applySeo();
-          continue;
-        }
-        const nodes = postNodes();
-        if (!nodes.length) {
-          clearPosts();
-          continue;
-        }
-        const view = window.innerHeight || 800;
-        let first = -1;
-        let last = -1;
-        nodes.forEach((el) => {
-          const box = el.getBoundingClientRect();
-          const idx = keyIndex.get(el.dataset.postKey);
-          if (idx == null || box.bottom <= 0 || box.top >= view) return;
-          if (first < 0) first = idx;
-          last = idx;
+      if (!items.length) return;
+      if (!end) {
+        const guess = Math.ceil((window.innerHeight || 800) / 320) + KEEP;
+        const to = Math.min(items.length, Math.max(guess, KEEP + 1));
+        appendRange(0, to);
+        start = 0;
+        end = to;
+        applySeo();
+        if (end >= items.length - KEEP) pullMore();
+        return;
+      }
+      const nodes = postNodes();
+      if (!nodes.length) return;
+      const view = window.innerHeight || 800;
+      let above = 0;
+      let below = 0;
+      nodes.forEach((el) => {
+        const box = el.getBoundingClientRect();
+        if (box.bottom < 0) above += 1;
+        else if (box.top > view) below += 1;
+      });
+      const firstTop = nodes[0].getBoundingClientRect().top;
+      if (start > 0 && firstTop > 24) {
+        const back = Math.max(KEEP, Math.ceil(firstTop / 480));
+        const newStart = Math.max(0, start - back);
+        const anchor = nodes[0];
+        hold(anchor, () => {
+          padEl.insertAdjacentHTML('afterend', htmlFor(newStart, start));
+          activate(newStart, start);
         });
-        if (first < 0) {
-          const top = nodes[0].getBoundingClientRect().top;
-          const idx = keyIndex.get((top >= view ? nodes[0] : nodes[nodes.length - 1]).dataset.postKey) || 0;
-          first = idx;
-          last = idx;
+        start = newStart;
+      } else if (above > KEEP + 2) {
+        const anchor = nodes[above - KEEP];
+        const newStart = anchor ? keyIndex.get(anchor.dataset.postKey) : start;
+        if (anchor && newStart > start) {
+          hold(anchor, () => {
+            let node = padEl.nextElementSibling;
+            while (node && node !== anchor) {
+              const next = node.nextElementSibling;
+              node.remove();
+              node = next;
+            }
+          });
+          start = newStart;
         }
-        let newStart = Math.max(0, first - KEEP);
-        const firstTop = nodes[0].getBoundingClientRect().top;
-        if (start > 0 && firstTop > 0 && first < 0) {
-          newStart = Math.max(0, start - Math.ceil(firstTop / 420) - KEEP);
-        }
-        let newEnd = Math.min(items.length, Math.max(end, last + 1 + KEEP));
-        const tailEl = nodes[nodes.length - 1];
+      }
+      const fresh = postNodes();
+      const tailEl = fresh[fresh.length - 1];
+      if (tailEl && end < items.length) {
         const tailAd = tailEl.nextElementSibling;
         const tail = (tailAd && tailAd.getAttribute('data-ad') === '1' ? tailAd : tailEl).getBoundingClientRect().bottom;
-        if (tail < view + 240 && newEnd < items.length) newEnd = Math.min(items.length, newEnd + KEEP);
-        if (newStart === start && newEnd === end) break;
-        if (newStart < start) prependRange(newStart, start);
-        else if (newStart > start) trimTop(newStart);
-        if (newEnd > end) appendRange(end, newEnd);
-        else if (newEnd < end) trimBottom(newEnd);
-        start = newStart;
-        end = newEnd;
-        if (!start && padEl && (window.scrollY || 0) < 2) padEl.style.height = '0px';
+        if (tail < view + 500) {
+          const to = Math.min(items.length, end + KEEP);
+          appendRange(end, to);
+          end = to;
+        }
+      } else if (below > KEEP + 8) {
+        const keepBelow = nodes[nodes.length - 1 - (below - KEEP)];
+        const newEnd = keepBelow ? (keyIndex.get(keepBelow.dataset.postKey) || 0) + 1 : end;
+        if (newEnd < end) {
+          trimBottom(newEnd);
+          end = newEnd;
+        }
       }
-      if (end && end >= items.length - KEEP) pullMore();
+      if (end >= items.length - KEEP) pullMore();
     } finally {
       syncing = false;
     }
