@@ -53,7 +53,8 @@
 
     // feed
     setAttr('#feed-list', 'aria-label', I18N.feedAria);
-    setText('#feed-more', I18N.more);
+    const moreBtn = document.getElementById('feed-more');
+    if (moreBtn) moreBtn.remove();
 
     // footer
     setText('#footer-copy', I18N.footerCopy);
@@ -711,7 +712,6 @@
   if (!list) return;
 
   // ===== ЛЕНТА =====
-  const more = document.getElementById('feed-more');
   const sentinel = document.getElementById('feed-sentinel');
   const RESERVED = { media: 1, css: 1, js: 1, icon: 1, icons: 1, photo: 1, privacy: 1, assets: 1 };
   function pageParts() {
@@ -737,19 +737,11 @@
   const channel = channelFromPage();
   const postId = postFromPage();
   if (channel) list.dataset.channel = channel;
-  const PAGE = 12;
-  let queue = [];
   let packs = [];
   const authored = {
     title: document.title,
     description: ((document.querySelector('meta[name="description"]') || {}).content) || ''
   };
-
-  function renderNext() {
-    shown += 5;
-    if (shown > items.length) loadArchive();
-    paintFeed();
-  }
 
   function setMeta(attr, key, value) {
     if (!value) return;
@@ -868,32 +860,41 @@
     });
   }
 
+  const KEEP = 5;
   let items = [];
-  let shown = 0;
-  let shownKeys = '';
+  let start = 0;
+  let end = 0;
+  let padEl = null;
+  let syncing = false;
   let archiveState = 'idle';
+  let moreState = 'idle';
   let feedNames = [];
   const tipIds = new Map();
   const fetchedIds = new Set();
+  const keyIndex = new Map();
 
-  function screenTarget() {
-    const posts = list ? list.querySelectorAll('.feed-item:not([data-ad])') : [];
-    if (!posts.length) return 8;
-    const bottom = window.innerHeight || 800;
-    let visible = 0;
-    posts.forEach((el) => {
-      const box = el.getBoundingClientRect();
-      if (box.bottom > 0 && box.top < bottom) visible += 1;
-    });
-    if (!visible) visible = Math.max(2, Math.ceil((window.innerHeight || 800) / 460));
-    return visible + 5;
+  function reindex() {
+    keyIndex.clear();
+    items.forEach((item, index) => keyIndex.set(item.key, index));
   }
   function addEntries(entries) {
     const map = new Map(items.map((item) => [item.key, item]));
     entries.forEach((item) => {
       if (item && item.key) map.set(item.key, item);
     });
+    const anchorKey = items[start] && items[start].key;
     items = Array.from(map.values()).sort((a, b) => Date.parse(b.date || 0) - Date.parse(a.date || 0));
+    reindex();
+    if ((window.scrollY || 0) < 80) {
+      clearPosts();
+      return;
+    }
+    if (anchorKey && keyIndex.has(anchorKey)) {
+      const at = keyIndex.get(anchorKey);
+      const shift = at - start;
+      start += shift;
+      end += shift;
+    }
   }
   function entriesFromPacks(source) {
     const entries = [];
@@ -913,24 +914,164 @@
     });
     return entries;
   }
-  function paintFeed() {
-    if (!list) return;
-    const need = Math.max(shown, screenTarget());
-    const slice = items.slice(0, need);
-    shown = slice.length;
-    const keys = slice.map((item) => item.key).join('|');
-    const noMore = shown >= items.length && archiveState === 'done';
-    if (more) more.hidden = noMore || !slice.length;
-    if (keys === shownKeys) return;
-    shownKeys = keys;
-    adSerial = 0;
-    list.innerHTML = slice.map((item) => item.html).join('');
-    mountBanner();
-    list.querySelectorAll('.feed-item:not([data-ad])').forEach(hydrate);
+  function clearPosts() {
+    if (padEl) padEl.style.height = '0px';
+    Array.from(list.children).forEach((el) => {
+      if (el !== padEl) el.remove();
+    });
+    start = 0;
+    end = 0;
+  }
+  function ensurePad() {
+    if (padEl && padEl.isConnected) return;
+    padEl = document.createElement('div');
+    padEl.className = 'feed-pad';
+    padEl.setAttribute('aria-hidden', 'true');
+    list.insertBefore(padEl, list.firstChild);
+  }
+  function postNodes() {
+    return Array.from(list.querySelectorAll('.feed-item:not([data-ad])'));
+  }
+  function htmlFor(from, to) {
+    let html = '';
+    for (let i = from; i < to; i += 1) {
+      html += items[i].html;
+      if (!postId && i % 5 === 0) html += adCard('chan-ad-banner-' + i);
+    }
+    return html;
+  }
+  function activate(from, to) {
+    const want = new Set();
+    for (let i = from; i < to; i += 1) want.add(items[i].key);
+    postNodes().forEach((el) => {
+      if (want.has(el.dataset.postKey)) hydrate(el);
+    });
+    bindActions(list);
+    paintTimes(list);
+    const id = adBlockId('banner');
+    if (!id || postId) return;
+    for (let i = from; i < to; i += 1) {
+      if (i % 5 === 0) renderYandex(id, { renderTo: 'chan-ad-banner-' + i, pageNumber: (i / 5) + 1 });
+    }
+  }
+  function appendRange(from, to) {
+    if (to <= from) return;
+    list.insertAdjacentHTML('beforeend', htmlFor(from, to));
+    activate(from, to);
+  }
+  function prependRange(from, to) {
+    if (to <= from) return;
+    const anchor = padEl.nextElementSibling;
+    const before = anchor ? anchor.getBoundingClientRect().top : 0;
+    padEl.insertAdjacentHTML('afterend', htmlFor(from, to));
+    const after = anchor ? anchor.getBoundingClientRect().top : 0;
+    const grew = after - before;
+    const next = padEl.offsetHeight - grew;
+    if (next < 0) {
+      padEl.style.height = '0px';
+      window.scrollBy(0, -next);
+    } else {
+      padEl.style.height = next + 'px';
+    }
+    activate(from, to);
+  }
+  function trimTop(newStart) {
+    const nodes = postNodes();
+    const anchor = nodes.find((el) => (keyIndex.get(el.dataset.postKey) || 0) >= newStart);
+    if (!anchor) return;
+    const before = anchor.getBoundingClientRect().top;
+    let node = padEl.nextElementSibling;
+    while (node && node !== anchor) {
+      const next = node.nextElementSibling;
+      node.remove();
+      node = next;
+    }
+    const delta = before - anchor.getBoundingClientRect().top;
+    if (delta > 0) padEl.style.height = (padEl.offsetHeight + delta) + 'px';
+  }
+  function trimBottom(newEnd) {
+    postNodes().forEach((el) => {
+      const idx = keyIndex.get(el.dataset.postKey);
+      if (idx == null || idx < newEnd) return;
+      const ad = el.nextElementSibling;
+      if (ad && ad.getAttribute('data-ad') === '1') ad.remove();
+      el.remove();
+    });
+  }
+  function paintPost() {
+    list.innerHTML = items.map((item) => item.html).join('');
+    list.querySelectorAll('.feed-item').forEach(hydrate);
     bindActions(list);
     paintTimes(list);
     applySeo();
     mountPostAds();
+  }
+  function showLoaded() {
+    if (postId) paintPost();
+    else syncWindow();
+  }
+  function syncWindow() {
+    if (syncing || postId || !list) return;
+    syncing = true;
+    try {
+      ensurePad();
+      let guard = 0;
+      while (guard < 20) {
+        guard += 1;
+        if (!items.length) break;
+        if (!end) {
+          const guess = Math.ceil((window.innerHeight || 800) / 280) + KEEP;
+          const to = Math.min(items.length, Math.max(guess, KEEP + 1));
+          appendRange(0, to);
+          start = 0;
+          end = to;
+          applySeo();
+          continue;
+        }
+        const nodes = postNodes();
+        if (!nodes.length) {
+          clearPosts();
+          continue;
+        }
+        const view = window.innerHeight || 800;
+        let first = -1;
+        let last = -1;
+        nodes.forEach((el) => {
+          const box = el.getBoundingClientRect();
+          const idx = keyIndex.get(el.dataset.postKey);
+          if (idx == null || box.bottom <= 0 || box.top >= view) return;
+          if (first < 0) first = idx;
+          last = idx;
+        });
+        if (first < 0) {
+          const top = nodes[0].getBoundingClientRect().top;
+          const idx = keyIndex.get((top >= view ? nodes[0] : nodes[nodes.length - 1]).dataset.postKey) || 0;
+          first = idx;
+          last = idx;
+        }
+        let newStart = Math.max(0, first - KEEP);
+        const firstTop = nodes[0].getBoundingClientRect().top;
+        if (start > 0 && firstTop > 0 && first < 0) {
+          newStart = Math.max(0, start - Math.ceil(firstTop / 420) - KEEP);
+        }
+        let newEnd = Math.min(items.length, Math.max(end, last + 1 + KEEP));
+        const tailEl = nodes[nodes.length - 1];
+        const tailAd = tailEl.nextElementSibling;
+        const tail = (tailAd && tailAd.getAttribute('data-ad') === '1' ? tailAd : tailEl).getBoundingClientRect().bottom;
+        if (tail < view + 240 && newEnd < items.length) newEnd = Math.min(items.length, newEnd + KEEP);
+        if (newStart === start && newEnd === end) break;
+        if (newStart < start) prependRange(newStart, start);
+        else if (newStart > start) trimTop(newStart);
+        if (newEnd > end) appendRange(end, newEnd);
+        else if (newEnd < end) trimBottom(newEnd);
+        start = newStart;
+        end = newEnd;
+        if (!start && padEl && (window.scrollY || 0) < 2) padEl.style.height = '0px';
+      }
+      if (end && end >= items.length - KEEP) pullMore();
+    } finally {
+      syncing = false;
+    }
   }
 
   function loadJson(url) {
@@ -984,7 +1125,6 @@
   function loadArchive() {
     if (archiveState !== 'idle' || !feedNames.length) return;
     archiveState = 'loading';
-    if (more) more.hidden = false;
     Promise.all(feedNames.map((username) => loadJson('/' + encodeURIComponent(username) + '.json')))
       .then((archives) => {
         const loaded = archives.filter((pack) => pack && Array.isArray(pack.posts));
@@ -992,9 +1132,27 @@
         if (!channel) fillHooks(null, loaded.reduce((sum, pack) => sum + pack.posts.length, 0));
         addEntries(entriesFromPacks(loaded));
         archiveState = 'done';
-        paintFeed();
+        showLoaded();
       })
       .catch(() => { archiveState = 'idle'; });
+  }
+  function pullMore() {
+    if (postId || archiveState === 'loading' || moreState === 'loading') return;
+    const jobs = [];
+    feedNames.forEach((username) => {
+      const ids = takeIds(username, 3);
+      if (ids.length) jobs.push(loadIds(username, ids));
+    });
+    if (!jobs.length) {
+      if (archiveState === 'idle') loadArchive();
+      return;
+    }
+    moreState = 'loading';
+    Promise.all(jobs).then((packsNow) => {
+      addEntries(entriesFromPacks(packsNow));
+      moreState = 'idle';
+      showLoaded();
+    }).catch(() => { moreState = 'idle'; });
   }
   function loadFeed() {
     if (channel && postId) {
@@ -1004,17 +1162,15 @@
         if (hit) {
           packs = [pack];
           addEntries(entriesFromPacks([pack]));
-          shown = 1;
-          paintFeed();
+          showLoaded();
           return null;
         }
         return loadJson('/' + encodeURIComponent(channel) + '.json').then((full) => {
           if (!full || !full.posts) return;
           packs = [full];
           addEntries(entriesFromPacks([full]));
-          shown = 1;
           archiveState = 'done';
-          paintFeed();
+          showLoaded();
         });
       }).catch(() => {});
       return;
@@ -1034,16 +1190,22 @@
       })));
     }).then((fresh) => {
       addEntries(entriesFromPacks(fresh));
-      paintFeed();
+      showLoaded();
     }).catch(() => {});
   }
 
   loadFeed();
-  if (more) more.addEventListener('click', renderNext);
-  if (sentinel && 'IntersectionObserver' in window) {
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) renderNext();
-    }, { rootMargin: '600px' });
-    io.observe(sentinel);
+  if (!postId) {
+    let ticking = false;
+    const onFeedScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        syncWindow();
+      });
+    };
+    window.addEventListener('scroll', onFeedScroll, { passive: true });
+    window.addEventListener('resize', onFeedScroll);
   }
 })();
