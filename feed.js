@@ -5,7 +5,7 @@
   const ADS = {
     postFullscreenPhone: 'R-A-20468347-3', // Полноэкранный, платформа «Мобильная». Только страница поста.
     postFloorDesktop: 'R-A-20468347-2',    // Floor Ad, платформа «Десктопная». Только страница поста.
-    banner: 'R-A-20468347-4'               // Баннер. Главная и страница канала, одна карточка.
+    banner: 'R-A-20468347-4'               // Баннер. Лента: после 1-го поста и далее после каждых 5.
   };
 
   const I18N = {
@@ -372,34 +372,20 @@
       });
     });
   }
-  let bannerDone = false;
+  let adSerial = 0;
   function mountBanner() {
-    if (bannerDone || postId) return;
+    if (postId) return;
     const id = adBlockId('banner');
-    if (!id || !list || document.getElementById('chan-ad-banner')) return;
+    if (!id || !list) return;
     const posts = list.querySelectorAll('.feed-item:not([data-ad])');
-    if (posts.length >= 3) {
-      posts[2].insertAdjacentHTML('afterend', adCard('chan-ad-banner'));
-      bannerDone = true;
-      renderYandex(id, { renderTo: 'chan-ad-banner' });
-      return;
+    for (let i = 0; i < posts.length; i += 5) {
+      const next = posts[i].nextElementSibling;
+      if (next && next.getAttribute('data-ad') === '1') continue;
+      adSerial += 1;
+      const renderId = 'chan-ad-banner-' + adSerial;
+      posts[i].insertAdjacentHTML('afterend', adCard(renderId));
+      renderYandex(id, { renderTo: renderId, pageNumber: adSerial });
     }
-    if (queue.length) return;
-    let slot = document.getElementById('chan-ad-slot');
-    const box = document.getElementById('yandex-rtb-chan');
-    if (!slot) {
-      list.insertAdjacentHTML('afterend', adCard('yandex-rtb-chan'));
-      slot = document.getElementById('yandex-rtb-chan');
-      if (slot) slot = slot.closest('[data-ad]');
-    }
-    if (box) box.id = 'chan-ad-banner';
-    else {
-      const fresh = document.getElementById('yandex-rtb-chan');
-      if (fresh) fresh.id = 'chan-ad-banner';
-    }
-    if (slot) slot.hidden = false;
-    bannerDone = true;
-    renderYandex(id, { renderTo: 'chan-ad-banner' });
   }
 
   function card(username, post, channelOnly, title) {
