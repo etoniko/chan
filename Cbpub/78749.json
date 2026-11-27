@@ -1,0 +1,28 @@
+{
+  "username": "Cbpub",
+  "title": "КБ",
+  "posts": [
+    {
+      "id": 78749,
+      "date": "2026-11-27T06:06:15.000Z",
+      "title": "Зуммеры итоги",
+      "description": "Зуммеры, итоги",
+      "text": "Зуммеры, итоги",
+      "html": "Зуммеры, итоги",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/2fbcmtbs.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/hu3zfedp.jpg"
+        }
+      ],
+      "msgs": [
+        78749,
+        78750
+      ]
+    }
+  ]
+}
