@@ -1,0 +1,20 @@
+{
+  "username": "cafe_citaty",
+  "title": "Cafe дe Flore • Цитаты • Мемы",
+  "posts": [
+    {
+      "id": 7680,
+      "date": "2026-11-27T17:35:06.000Z",
+      "title": "это могли бы быть мы",
+      "description": "это могли бы быть мы",
+      "text": "это могли бы быть мы",
+      "html": "это могли бы быть мы",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/8f078uyg.jpg"
+        }
+      ]
+    }
+  ]
+}
