@@ -1,0 +1,63 @@
+{
+  "username": "mudak",
+  "title": "MDK",
+  "posts": [
+    {
+      "id": 109595,
+      "date": "2026-11-28T13:40:32.000Z",
+      "title": "Его не проведешь",
+      "description": "Его не проведешь",
+      "text": "Его не проведешь",
+      "html": "Его не проведешь",
+      "media": [
+        {
+          "type": "photo",
+          "path": "/media/y05uwhry.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/bsw3ubu0.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/1sc2wqig.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/g2t95e49.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/ro2g6b73.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/2sww4e22.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/n83s7kgz.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/4fycl2tg.jpg"
+        },
+        {
+          "type": "photo",
+          "path": "/media/z2klphnp.jpg"
+        }
+      ],
+      "msgs": [
+        109595,
+        109596,
+        109597,
+        109598,
+        109599,
+        109600,
+        109601,
+        109602,
+        109603
+      ]
+    }
+  ]
+}
